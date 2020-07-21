@@ -1,10 +1,16 @@
+/* TAG SELECTORS */
 body {
-  background-color: #d6e4f0;
+  margin: 0;
 }
 
 a {
   color: #163172;
   text-decoration: none;
+}
+
+div {
+  background-color: #d6e4f0;
+  padding: 16px;
 }
 
 img {
@@ -21,4 +27,42 @@ hr {
 
 h1, h2, h3, h4, h5, h6 {
   color: #163172;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+p {
+  color: #1e56a0;
+  margin-bottom: 0;
+}
+
+/* CLASS SELECTORS */
+.top-container {
+  text-align: center;
+}
+
+.top-cloud {
+  position: absolute;
+}
+
+.bottom-cloud {
+  position: absolute;
+}
+
+.island {
+  height: 560px;
+  position: relative;
+  top: 240px;
+}
+
+.middle-container {
+  background-color: #f6f6f6;
+  height: 200px;
+}
+
+.bottom-container {
+  background-color: #1e56a0;
+  height: 200px;
 }
