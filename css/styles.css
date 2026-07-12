@@ -131,6 +131,30 @@ blockquote p {
   color: var(--secondary-muted);
 }
 
+.practice {
+  border-left: 4px solid var(--accent-color);
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: rgba(247, 165, 1, 0.05);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95rem;
+  color: var(--secondary-muted);
+}
+
+.practice b {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-muted);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.practice p {
+  margin-bottom: 0;
+}
+
 ul, ol {
   color: var(--secondary-muted);
   padding-left: 1.5rem;

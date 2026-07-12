@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AssessNow: Shipping a Marketing Site on Svelte 5 Without a Framework — Fadhil Hanri</title>
+  <meta name="description" content="A build log on the AssessNow marketing site: Svelte 5 runes without SvelteKit, a 60-line i18n store, a CSS-variable design system, and the interactive demo I deleted.">
+  <link rel="stylesheet" href="../css/styles.css?v=3">
+  <link rel="icon" href="../icons/personal-computer.ico">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="../index.html" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="../index.html#logs">Logs</a>
+          <a href="../index.html#capabilities">Capabilities</a>
+          <a href="../index.html#about">About</a>
+          <a href="../index.html#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-header">
+          <a href="../index.html" class="article-back-link">← Back to Logs</a>
+          <h1 class="article-title">AssessNow — Shipping a Marketing Site on Svelte 5 Without a Framework</h1>
+          <div class="article-meta-large">
+            <span>July 12, 2026</span>
+            <span>•</span>
+            <span>7 min read</span>
+            <span>•</span>
+            <span>Svelte 5, TypeScript, Vite, i18n, CSS, Web</span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <p>
+            AssessNow is a proctored technical assessment platform. The product itself is a Node/Express
+            application; <code>assessnow.online</code> is the shop window in front of it — one static page whose
+            only job is to explain the product and hand the visitor off to
+            <code>recruiter.assessnow.online</code>.
+          </p>
+          <p>
+            A landing page is the kind of thing people reach for Next.js or SvelteKit to build. I didn't. This log
+            walks through what the site is actually made of: five files, roughly 3,000 lines, no router, no SSR, no
+            component library — and the specific decisions that kept it that small. Each section ends with a
+            practice rep, because a build log you only read is a build log you forget.
+          </p>
+
+          <h2>1. The stack, and what got left out</h2>
+          <p>
+            Svelte 5 + TypeScript + Vite. Nothing else. The dependency list is entirely dev-time — nothing ships to
+            the browser but the compiled bundle.
+          </p>
+          <pre><code>src/
+├── main.ts              9 lines   — mount the app
+├── App.svelte         589 lines   — the whole page
+├── app.css            381 lines   — the design system
+└── lib/
+    ├── i18n.ts        311 lines   — EN/ID translation store
+    ├── HowItWorks.svelte  317     — the only stateful section
+    ├── ProctorSimulator.svelte    — (see part 5)
+    └── CodeSandbox.svelte         — (see part 5)</code></pre>
+          <p>
+            The Svelte 5 entry point is worth a beat, because it changed from Svelte 4. There's no
+            <code>new App({ target })</code> constructor any more; components are mounted with a function:
+          </p>
+          <pre><code>import { mount } from 'svelte'
+import './app.css'
+import App from './App.svelte'
+
+const app = mount(App, {
+  target: document.getElementById('app')!,
+})</code></pre>
+          <p>
+            What's <em>absent</em> is the actual decision. A single-page marketing site has one route, so a router
+            is dead weight. There's no data to fetch, so there's nothing for SSR to render that a pre-built static
+            file doesn't already contain. <code>vite build</code> emits a <code>dist/</code> of HTML, one JS chunk
+            and one CSS chunk — deployable to anything that serves files. Reaching for SvelteKit here would have
+            bought a build server to render a page that never changes.
+          </p>
+          <div class="practice">
+            <b>Practice — 15 min</b>
+            <p>Scaffold a fresh <code>npm create vite@latest -- --template svelte-ts</code> and delete everything down
+            to a single mounted component. Then try to name, out loud, one thing SvelteKit would give this site that
+            you'd actually use. If you can't, you've internalized the decision.</p>
+          </div>
+
+          <h2>2. A 60-line i18n layer</h2>
+          <p>
+            The site ships in English and Indonesian. The whole translation system is a Svelte store, and it fits
+            on one screen:
+          </p>
+          <pre><code>export type Lang = 'en' | 'id';
+
+const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null;
+export const lang = writable&lt;Lang&gt;(stored === 'id' ? 'id' : 'en');
+
+lang.subscribe((l) =&gt; {
+  if (typeof document !== 'undefined') document.documentElement.lang = l;
+  if (typeof localStorage !== 'undefined') localStorage.setItem('lang', l);
+});
+
+const dict: Record&lt;Lang, Record&lt;string, string&gt;&gt; = { en, id };
+
+export const t = derived(lang, (l) =&gt; (key: string): string =&gt; dict[l][key] ?? en[key] ?? key);
+
+/** Non-reactive lookup for code paths outside templates (e.g. log entries). */
+export function tNow(key: string): string {
+  const l = get(lang);
+  return dict[l][key] ?? en[key] ?? key;
+}</code></pre>
+          <p>Four decisions are buried in there:</p>
+          <ul>
+            <li>
+              <b>A derived store that returns a function.</b> <code>$t('hero.sub')</code> in a template re-renders
+              when <code>lang</code> changes, because <code>t</code> is a store whose <em>value</em> is a lookup
+              function. Swap the language and every string on the page follows — no page reload, no re-render
+              plumbing.
+            </li>
+            <li>
+              <b>A two-step fallback chain.</b> <code>dict[l][key] ?? en[key] ?? key</code>. A missing Indonesian
+              string falls back to English; a missing key renders as the key itself. The failure mode of a typo'd
+              key is an ugly string, never a blank section — which is exactly the trade you want on a page whose
+              entire purpose is copy.
+            </li>
+            <li>
+              <b>A separate non-reactive escape hatch.</b> <code>tNow()</code> exists because imperative code —
+              pushing a timestamped log entry — needs a string <em>now</em>, not a subscription. Mixing the two
+              would mean reactive strings inside data that was never meant to be reactive.
+            </li>
+            <li>
+              <b>Persistence as a side effect of subscribing.</b> The <code>lang.subscribe</code> block writes to
+              <code>localStorage</code> and sets <code>&lt;html lang&gt;</code> — so the language choice survives a
+              reload and screen readers pick the right voice. One subscription, two jobs, zero call sites that have
+              to remember.
+            </li>
+          </ul>
+          <p>
+            The keys are flat and hold whole sentences (<code>'f2.p': 'On-device face presence and…'</code>) rather
+            than interpolated fragments. Indonesian doesn't share English's clause order; giving the translator a
+            whole sentence lets them restructure it. Fragment-level keys quietly force every language into English
+            grammar.
+          </p>
+          <div class="practice">
+            <b>Practice — 20 min</b>
+            <p>Add a third language with two keys and one key deliberately missing. Watch the fallback chain do its
+            job. Then break it on purpose: make <code>t</code> a plain function instead of a derived store, and
+            find out why the page stops updating when you toggle the language.</p>
+          </div>
+
+          <h2>3. Copy as data, layout as a loop</h2>
+          <p>
+            The features section renders six blocks. There are not six blocks of markup:
+          </p>
+          <pre><code>{#each ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'] as f, i}
+  &lt;div class="feature-highlight" class:alt={i % 2 === 1}&gt;
+    &lt;div class="fh-inner"&gt;
+      &lt;div class="fh-index"&gt;0{i + 1}&lt;/div&gt;
+      &lt;div&gt;
+        &lt;h3&gt;{$t(f + '.h')}&lt;/h3&gt;
+        &lt;p&gt;{$t(f + '.p')}&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+{/each}</code></pre>
+          <p>
+            The i18n dictionary became the content layer. Copy lives in <code>i18n.ts</code>; the component owns
+            only the shape. Adding a seventh feature is one array entry and two dictionary keys, and the alternating
+            background (<code>class:alt={i % 2 === 1}</code>) keeps working without anyone touching CSS.
+          </p>
+          <p>
+            The headline treatment shows the same idea handling a harder case. The wordmark is two-tone —
+            "Assess<b style="color:var(--accent-muted)">Now</b>" — so the heading is split into three keys:
+          </p>
+          <pre><code>&lt;h2&gt;&lt;span&gt;{$t('sec.features.h.pre')}&lt;/span&gt;&lt;b&gt;{$t('sec.features.h.em')}&lt;/b&gt;&lt;span&gt;{$t('sec.features.h.post')}&lt;/span&gt;&lt;/h2&gt;
+
+'sec.features.h.pre':  'What Assess',
+'sec.features.h.em':   'Now',
+'sec.features.h.post': ' Does',</code></pre>
+          <p>
+            Splitting a sentence across keys is normally the mistake I warned about in part 2. It's justified here
+            for exactly one reason: the split is a <em>visual</em> boundary (a colour change inside a brand name),
+            not a grammatical one, and the brand name doesn't translate. Knowing which rule you're breaking, and
+            why, is the whole skill.
+          </p>
+          <div class="practice">
+            <b>Practice — 15 min</b>
+            <p>Add a seventh feature card end to end without opening <code>App.svelte</code>'s <code>&lt;style&gt;</code>
+            block. If you find yourself needing to, the abstraction leaked — work out where.</p>
+          </div>
+
+          <h2>4. The design system is 30 CSS variables</h2>
+          <p>
+            No Tailwind, no component library. <code>app.css</code> defines a palette, three type families, and a
+            handful of primitives — <code>.btn</code>, <code>.card</code>, <code>.chip</code>, <code>.trust</code> —
+            and every component composes from those.
+          </p>
+          <pre><code>:root {
+  --paper: #ffffff;
+  --ink: #1b1714;
+  --ink-soft: #4a423b;
+  --line: #d8d0c2;
+  --accent: #b8431f;       /* terracotta */
+
+  --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Components reference --font-mono; alias it so it can't silently fall back. */
+  --font-mono: var(--mono);
+}</code></pre>
+          <p>
+            That last comment is a scar. A CSS variable that doesn't exist doesn't throw — it silently resolves to
+            nothing and the browser falls back to Times New Roman. Two components had been written against
+            <code>--font-mono</code> while the token was named <code>--mono</code>. The fix is the alias; the lesson
+            is that <em>custom properties fail silently</em>, so the token layer is the one place worth being
+            pedantic about names.
+          </p>
+          <p>Three details in that file do disproportionate work:</p>
+          <ul>
+            <li>
+              <code>scroll-margin-top: 90px</code> on <code>.section-block</code>. The header is
+              <code>position: fixed</code>, so a naive anchor jump parks the section heading <em>underneath</em> it.
+              One property, and every in-page link lands correctly. It's the single most-forgotten line in
+              fixed-header layouts.
+            </li>
+            <li>
+              <code>:focus-visible</code> rather than <code>:focus</code> for the outline ring. Keyboard users get a
+              visible terracotta ring; mouse users don't get an outline stuck on a button they just clicked.
+            </li>
+            <li>
+              A <code>prefers-reduced-motion</code> block that flattens every animation and transition to
+              0.01ms — paired with a check in the JS, because CSS can't reach
+              <code>scrollIntoView</code>:
+              <pre style="margin-top:8px"><code>const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });</code></pre>
+              Smooth scrolling is a vestibular trigger. The CSS media query alone doesn't stop a
+              JS-initiated smooth scroll, so the preference has to be honoured in both places.
+            </li>
+          </ul>
+          <div class="practice">
+            <b>Practice — 15 min</b>
+            <p>Delete the <code>--font-mono</code> alias and reload. Note how nothing errors and nothing looks broken
+            until you look closely — then restore it. That's what a silent failure feels like, and it's why you now
+            check the computed style rather than trusting the page.</p>
+          </div>
+
+          <h2>5. The interactive demo I deleted</h2>
+          <p>
+            The site used to have two live demos. <code>ProctorSimulator.svelte</code> (934 lines) let you click
+            "switch tab", "second person enters frame", "paste code" and watch a Trust Score drop and an event log
+            fill up. <code>CodeSandbox.svelte</code> (561 lines) let you edit a <code>sum()</code> function and run
+            it against three unit tests.
+          </p>
+          <p>They were the most fun code in the repo, and they were built honestly:</p>
+          <pre><code>/* Impacts mirror the real integrity weights (server/src/integrity.js):
+   tab_blur 8 · high_noise 5 · face_missing 10 · paste 12 · multi_face 25.
+   Log copy claims only what the product does — face counting, not
+   biometric identification. */</code></pre>
+          <p>
+            The simulator's penalties are the production penalties. The sandbox's boot log names the real limits
+            (128MB heap, 3s timeout, dynamic evaluation blocked) and then states plainly that the demo runs in your
+            browser while the real thing runs in an isolated server worker. Both were written so that nothing on the
+            page overclaims.
+          </p>
+          <p>
+            They still came out. Both components are still in <code>src/lib/</code>; <code>App.svelte</code> simply
+            stopped importing them. The reasoning: this is an <em>integrity</em> product, and a simulated integrity
+            engine — however carefully hedged — asks the visitor to evaluate a mock. A buyer of a trust product is
+            the last person you want squinting at a fake. The page they got instead states what the system does and
+            sends them to the real dashboard.
+          </p>
+          <p>
+            Keeping the files unimported rather than deleting them is deliberate too: the decision is reversible,
+            the <code>sim.*</code> and <code>sb.*</code> i18n keys are still in the dictionary, and a tree-shaken
+            build doesn't ship a byte of it.
+          </p>
+          <div class="practice">
+            <b>Practice — 20 min</b>
+            <p>Re-mount <code>ProctorSimulator</code> in <code>App.svelte</code>, use it, and then argue the opposite
+            case in writing: why keeping the demo would have been the right call. If you can't make that argument
+            well, you didn't actually make a decision — you had a preference.</p>
+          </div>
+
+          <h2>6. Local state: runes, and where they stop</h2>
+          <p>
+            <code>HowItWorks.svelte</code> is the only stateful section left, and its state is one line:
+          </p>
+          <pre><code>let activeTab = $state&lt;'recruiter' | 'candidate' | 'report'&gt;('recruiter');</code></pre>
+          <p>
+            Svelte 5's <code>$state</code> replaces the compiler's old assignment-tracking magic with an explicit
+            rune, and the union type means a typo'd tab id fails at compile time, not in a dead <code>{#if}</code>
+            branch that renders nothing.
+          </p>
+          <p>
+            The dividing line worth internalizing: <b>runes for state one component owns, stores for state that
+            crosses component boundaries.</b> Language is a store because the header toggles it and every component
+            reads it. The active tab is a rune because nothing outside <code>HowItWorks</code> has any business
+            knowing which tab is open. Promoting local state into a global store is the most common way a small app
+            starts feeling like a large one.
+          </p>
+          <p>And the small discipline that keeps a rune-based component honest — cleanup:</p>
+          <pre><code>onMount(() =&gt; {
+  micInterval = setInterval(() =&gt; { /* … */ }, 800);
+  return () =&gt; clearInterval(micInterval);   // ← the whole point
+});</code></pre>
+          <p>
+            The function returned from <code>onMount</code> runs on destroy. Without it, an interval keeps firing
+            against a component that no longer exists — the leak that survives every navigation and is invisible
+            until the tab has been open an hour.
+          </p>
+          <div class="practice">
+            <b>Practice — 20 min</b>
+            <p>Rebuild <code>HowItWorks</code>'s tab switcher from an empty file: three tabs, an <code>aria-current</code>
+            on the active one, panes swapped with <code>{#if}</code>. Then diff it against the original. The diff is
+            your actual skill gap — everything you had to look up is the part you'd been letting the compiler (or an
+            assistant) hold for you.</p>
+          </div>
+
+          <hr />
+
+          <h2>Read it back</h2>
+          <p>Three questions worth answering from the code, before checking:</p>
+          <ul>
+            <li>
+              <code>t</code> is a <code>derived</code> store returning a function, not a plain function. Trace what
+              breaks in the template if it were a plain function — and say precisely <em>why</em> Svelte would stop
+              re-rendering.
+            </li>
+            <li>
+              <code>i18n.ts</code> guards every <code>localStorage</code> and <code>document</code> access with
+              <code>typeof … !== 'undefined'</code>. The site has no SSR. Is the guard dead code, or is it buying
+              something?
+            </li>
+            <li>
+              The features loop is keyed by array index (<code>{#each [...] as f, i}</code>). Under what change to
+              this component would that become a real bug?
+            </li>
+          </ul>
+
+          <h2>The through-line</h2>
+          <p>
+            Every part of this build was a subtraction. No framework, because there's one route. No CSS library,
+            because thirty variables cover it. No demo, because a fake integrity engine undermines a real one. The
+            site is small not because it does little, but because each thing it doesn't do was refused on purpose.
+          </p>
+          <p>
+            That's the part that doesn't transfer by reading. Do the reps.
+          </p>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
