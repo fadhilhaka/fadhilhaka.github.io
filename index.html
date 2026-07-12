@@ -1,29 +1,423 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
-
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Fadhil Hanri Kamarz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fadhil Hanri — App & Web Developer</title>
+  <meta name="description" content="Portfolio of Fadhil Hanri Kamarz, iOS and Web Developer. Focused on SwiftUI, SwiftData, SvelteKit, and clean architectures.">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="icons/personal-computer.ico">
+  <script src="js/app.js" defer></script>
 </head>
 
 <body>
-  <div class="top-container">
-    <img class="top-cloud" src="images/cloud.png" alt="cloud-image">
-    <h1>Fadhil Hanri Kamarz</h1>
-    <p>a Web and iOS Developer</p>
-    <img class="bottom-cloud" src="images/cloud.png" alt="cloud-image">
-    <!-- Icons made by <a href="https://www.flaticon.com/authors/iconixar" title="iconixar">iconixar</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a> -->
-    <img class="island" src="images/island.png" alt="island-image">
-    <!-- Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a> -->
-  </div>
-  <div class="middle-container">
+  <div class="shell">
+    <header>
+      <nav>
+        <a href="#home" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="links">
+          <a href="#home" class="active">Home</a>
+          <a href="#projects">Projects</a>
+          <a href="#capabilities">Capabilities</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
 
-  </div>
-  <div class="bottom-container">
+    <div class="window-frame" id="retro-window">
+      <div class="window-header">
+        <div class="window-title-group">
+          <span class="window-icon">🗂️</span>
+          <span class="window-title">index.md</span>
+        </div>
+        <div class="window-controls">
+          <button class="win-btn minimize" aria-label="Minimize">_</button>
+          <button class="win-btn resize" aria-label="Resize">◻</button>
+          <button class="win-btn close" aria-label="Close">×</button>
+        </div>
+      </div>
+      
+      <main class="window-content">
+        <!-- HOME SECTION -->
+        <section id="home-section" class="tab-content active">
+          <div class="hero">
+            <div class="status-badge">
+              <span class="status-dot"></span>
+              <span>Building in public</span>
+            </div>
+            <h1>Hi, I'm Fadhil. <br>I build apps.</h1>
+            <p>
+              Mobile and web developer crafting useful, well-designed digital products. 
+              Creator of Silsilah - Family Tree, and currently developing Neraca.
+            </p>
+          </div>
+          
+          <div class="section-head">
+            <h2>Featured work</h2>
+            <a href="#projects">All projects →</a>
+          </div>
+          
+          <div class="grid grid-2col">
+            <!-- Silsilah Preview Card -->
+            <article class="project-card">
+              <div class="project-head">
+                <h3>Silsilah</h3>
+              </div>
+              <p class="tagline">Genealogy & family tree builder</p>
+              <p class="desc">
+                A cross-platform family tree application to build, visualize, and explore genealogy. Released on iOS and Web.
+              </p>
+              <div class="tech-pill-list">
+                <span>SwiftUI</span>
+                <span>Kotlin</span>
+                <span>SvelteKit</span>
+                <span>SwiftData</span>
+              </div>
+            </article>
 
+            <!-- Neraca Preview Card -->
+            <article class="project-card">
+              <div class="project-head">
+                <h3>Neraca</h3>
+              </div>
+              <p class="tagline">Personal finance, simplified</p>
+              <p class="desc">
+                An iOS personal finance tracker for managing wallets, transactions, budgets, and savings goals.
+              </p>
+              <div class="tech-pill-list">
+                <span>Swift</span>
+                <span>SwiftUI</span>
+                <span>SwiftData</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- PROJECTS SECTION -->
+        <section id="projects-section" class="tab-content">
+          <div class="page-header">
+            <h1>Projects</h1>
+            <p class="lead">Things I've architected, built, and shipped.</p>
+          </div>
+
+          <div class="grid">
+            <!-- Silsilah - Family Tree -->
+            <article class="project-card">
+              <div class="project-head">
+                <h3>Silsilah — Family Tree</h3>
+              </div>
+              <p class="tagline">Genealogy & family tree builder</p>
+              <p class="desc">
+                A cross-platform family tree application to build, visualize, and explore your genealogy. Released on iOS and Web, with the Android app launching soon.
+              </p>
+              
+              <div class="tech-breakdown-details">
+                <h4>Tech Stack Focus</h4>
+                <ul>
+                  <li><strong>SwiftUI</strong>: Custom relational canvas utilizing line-drawing paths (Bézier curves) for family connections with responsive pan/zoom gesture interaction.</li>
+                  <li><strong>SwiftData</strong>: Deep relational data graphs representing parents, children, and marriages, featuring custom cascading delete rules and schema integrity.</li>
+                  <li><strong>Kotlin</strong>: Native Android layer with Jetpack Compose, optimized for rendering complex tree layouts.</li>
+                  <li><strong>SvelteKit</strong>: High-efficiency web version designed with a custom grid system to ensure accessibility and SEO indexability of historical branches.</li>
+                </ul>
+              </div>
+
+              <div class="links-container">
+                <a href="https://apps.apple.com/id/app/silsilah-family-tree/id6784531748" target="_blank" rel="noopener" class="link-item">App Store ↗</a>
+                <a href="https://silsilah-familytree.com/" target="_blank" rel="noopener" class="link-item">Website ↗</a>
+              </div>
+
+              <div class="tech-pill-list">
+                <span>SwiftUI</span>
+                <span>Kotlin</span>
+                <span>SvelteKit</span>
+                <span>SwiftData</span>
+              </div>
+            </article>
+
+            <!-- Neraca -->
+            <article class="project-card">
+              <div class="project-head">
+                <h3>Neraca</h3>
+              </div>
+              <p class="tagline">Personal finance, simplified</p>
+              <p class="desc">
+                An iOS personal finance app designed to track wallets, transactions, budgets, debts, and savings goals.
+              </p>
+              
+              <div class="tech-breakdown-details">
+                <h4>Tech Stack Focus</h4>
+                <ul>
+                  <li><strong>SwiftUI</strong>: Modular UI panels with dynamic widgets, gauge charts for budget utilization, and custom transition animations.</li>
+                  <li><strong>SwiftData</strong>: Highly optimized query descriptors to filter transactions and aggregate wallet balances in real-time.</li>
+                  <li><strong>Swift (Core)</strong>: Built on decimal arithmetic architecture to prevent floating-point rounding discrepancies during multi-currency calculations.</li>
+                </ul>
+              </div>
+
+              <div class="tech-pill-list">
+                <span>Swift</span>
+                <span>SwiftUI</span>
+                <span>SwiftData</span>
+              </div>
+            </article>
+
+            <!-- WhatsApp Dashboard -->
+            <article class="project-card">
+              <div class="project-head">
+                <h3>WhatsApp Dashboard</h3>
+              </div>
+              <p class="tagline">Chat statistics & analytics</p>
+              <p class="desc">
+                An interactive dashboard to visualize and analyze exported WhatsApp chat logs, highlighting communication patterns, active hours, and emoji distributions.
+              </p>
+              
+              <div class="tech-breakdown-details">
+                <h4>Tech Stack Focus</h4>
+                <ul>
+                  <li><strong>JavaScript (ES6+)</strong>: A client-side regex parsing engine that processes huge chat files on the fly, keeping all data fully private without leaving the user's browser.</li>
+                  <li><strong>HTML5 Canvas / SVG</strong>: Rendered interactive charts showing message frequencies, hourly active usage heatmaps, and SVG-based word distributions.</li>
+                  <li><strong>Modern CSS</strong>: Responsive layout designed with responsive layout structures and scroll containers.</li>
+                </ul>
+              </div>
+
+              <div class="tech-pill-list">
+                <span>JavaScript</span>
+                <span>HTML5 / CSS3</span>
+                <span>Data Vis</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- CAPABILITIES SECTION -->
+        <section id="capabilities-section" class="tab-content">
+          <div class="page-header">
+            <h1>Capabilities</h1>
+            <p class="lead">My technical capabilities, architecture patterns, and engineering skills.</p>
+          </div>
+
+          <p class="capabilities-intro">
+            I specialize in developing local-first mobile applications and premium web interfaces. Here are my main fields of expertise:
+          </p>
+
+          <div class="capability-block">
+            <h3>📱 Mobile Architecture & Development</h3>
+            <p>Building offline-first applications with scalable, high-performance architectures.</p>
+            <div class="capability-details">
+              <div class="cap-item">
+                <h4>Clean Architecture & VIP/MVVM</h4>
+                <p>Ensuring testability, decoupling, and clear separation of concerns in complex mobile applications.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Local-First Persistence</h4>
+                <p>Using SwiftData and SQLite to model complex relational data graphs with low-latency responsiveness.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Concurrency & Threading</h4>
+                <p>Implementing Swift Concurrency (Actors, async/await) to keep user interfaces smooth at 60 FPS.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Performance Profiling</h4>
+                <p>Tracking CPU load, memory footprints, and resolving complex ARC retain cycles using Instruments.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="capability-block">
+            <h3>💻 Web Frontend Engineering</h3>
+            <p>Creating performant, beautiful, and accessible web experiences.</p>
+            <div class="capability-details">
+              <div class="cap-item">
+                <h4>Advanced Layout & Typography</h4>
+                <p>Expertise in CSS Grid, Flexbox, Container Queries (`@container`), and fluid viewport-scaling designs.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Modern Web Frameworks</h4>
+                <p>Building reactive components with SvelteKit and optimized Vanilla JS for lightweight micro-interactions.</p>
+              </div>
+              <div class="cap-item">
+                <h4>High Fidelity Interactions</h4>
+                <p>Implementing retro terminal designs, layouts, custom transitions, and physics-based drag states.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Accessibility & SEO</h4>
+                <p>Adhering to WCAG AA color contrast guidelines, utilizing semantic HTML elements, and configuring SEO meta headers.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="capability-block">
+            <h3>⚙️ Product & Process</h3>
+            <p>Translating business objectives and user experience concepts into running software.</p>
+            <div class="capability-details">
+              <div class="cap-item">
+                <h4>UX Prototyping & Design</h4>
+                <p>Wireframing layouts, designing application icons and vector SVG resources.</p>
+              </div>
+              <div class="cap-item">
+                <h4>Agile & OKRs</h4>
+                <p>Working efficiently in Scrum/Agile environments, aligning features with OKRs (Objectives and Key Results).</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="tech-level-grid">
+            <span class="level-label">Expert</span>
+            <div class="level-skills">
+              <span>Swift</span> <span>SwiftUI</span> <span>JavaScript</span> <span>HTML5</span> <span>CSS3</span> <span>UI/UX Design</span>
+            </div>
+
+            <span class="level-label">Proficient</span>
+            <div class="level-skills">
+              <span>Kotlin</span> <span>SvelteKit</span> <span>SwiftData</span> <span>SQLite</span> <span>Git</span> <span>Scrum</span>
+            </div>
+
+            <span class="level-label">Patterns</span>
+            <div class="level-skills">
+              <span>MVVM</span> <span>VIP</span> <span>Clean Architecture</span> <span>MVC</span> <span>Local-First</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ABOUT SECTION -->
+        <section id="about-section" class="tab-content">
+          <div class="page-header">
+            <h1>About Me</h1>
+          </div>
+
+          <p class="about-p">
+            I'm Fadhil Hanri Kamarz, a Web and iOS Developer.
+            My academic background is in petroleum engineering, but I followed my passion for tech. Inspired by the principle of "Do what you love", I challenged myself to transition into software development, starting with the accessible foundations of HTML and JavaScript.
+          </p>
+
+          <p class="about-p">
+            Since then, I've spent years building mobile apps and responsive dashboards, focusing on local data models, interactive visualizations, and fluid layouts.
+          </p>
+
+          <h2>Career Timeline</h2>
+          <div class="timeline">
+            <div class="timeline-event">
+              <div class="event-date">Feb 2020 - Present</div>
+              <h3 class="event-role">Mobile Application Developer</h3>
+              <div class="event-company">PT. Bhinneka Mentari Dimensi — Central Jakarta</div>
+              <p class="event-desc">Focusing on modern native mobile application development, building production applications, optimizing local data storage, and crafting rich interfaces.</p>
+            </div>
+
+            <div class="timeline-event">
+              <div class="event-date">Apr 2019 - Dec 2019</div>
+              <h3 class="event-role">iOS Developer</h3>
+              <div class="event-company">PT. Animo Resto Primera — South Jakarta</div>
+              <p class="event-desc">Developed client-side features for iOS platforms, working on responsive views, layout designs, and modular network integrations.</p>
+            </div>
+
+            <div class="timeline-event">
+              <div class="event-date">Jun 2018 - Mar 2019</div>
+              <h3 class="event-role">Junior Developer</h3>
+              <div class="event-company">Apple Developer Academy | Indonesia — South Tangerang</div>
+              <p class="event-desc">Learned native iOS development, professional app design, scrum workflows, and collaborated on cross-functional team projects to deliver high-quality apps.</p>
+            </div>
+          </div>
+
+          <h2>Interests</h2>
+          <ul class="interests-list">
+            <li>🌐 Tech Trends</li>
+            <li>💻 Creative Coding</li>
+            <li>🎮 Game Design</li>
+            <li>⚽ Football</li>
+            <li>🎨 Graphic Arts</li>
+          </ul>
+        </section>
+
+        <!-- CONTACT SECTION -->
+        <section id="contact-section" class="tab-content">
+          <div class="page-header">
+            <h1>Contact</h1>
+            <p class="lead">Let's build something together.</p>
+          </div>
+
+          <div class="contact-container">
+            <div>
+              <h2>Contact Details</h2>
+              <ul class="contact-info">
+                <li>
+                  <span class="label">Email</span>
+                  <a href="mailto:fadhilhanri@gmail.com">fadhilhanri@gmail.com</a>
+                </li>
+                <li>
+                  <span class="label">GitHub</span>
+                  <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">github.com/fadhilhaka</a>
+                </li>
+                <li>
+                  <span class="label">LinkedIn</span>
+                  <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">linkedin.com/in/fadhilhanri</a>
+                </li>
+                <li>
+                  <span class="label">Phone</span>
+                  <span>+62 8787 899 1253</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="contact-form-box">
+              <h3>Send a Message</h3>
+              <form action="mailto:fadhilhanri@gmail.com" method="post" enctype="text/plain">
+                <label for="form-name">Name</label>
+                <input type="text" id="form-name" name="name" required placeholder="Your Name">
+
+                <label for="form-email">Email</label>
+                <input type="email" id="form-email" name="email" required placeholder="your.email@example.com">
+
+                <label for="form-message">Message</label>
+                <textarea id="form-message" name="message" rows="6" required placeholder="Type your message here..."></textarea>
+
+                <button type="submit">Submit Form</button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Desktop Icons (Fallback navigation & OS look) -->
+    <div class="desktop-icons">
+      <a href="#home" class="desktop-icon active">
+        <span class="icon">🏠</span>
+        <span class="label">home.md</span>
+      </a>
+      <a href="#projects" class="desktop-icon">
+        <span class="icon">📁</span>
+        <span class="label">projects.md</span>
+      </a>
+      <a href="#capabilities" class="desktop-icon">
+        <span class="icon">⚡</span>
+        <span class="label">capabilities.md</span>
+      </a>
+      <a href="#about" class="desktop-icon">
+        <span class="icon">👤</span>
+        <span class="label">about.md</span>
+      </a>
+      <a href="#contact" class="desktop-icon">
+        <span class="icon">✉️</span>
+        <span class="label">contact.md</span>
+      </a>
+    </div>
+
+    <!-- Space visible when window minimized -->
+    <div class="desktop-empty-space"></div>
+
+    <footer>
+      <div class="footer-content">
+        <p>&copy; 2026 Fadhil Hanri</p>
+        <div class="footer-links">
+          <a href="mailto:fadhilhanri@gmail.com">Email</a>
+          <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+      </div>
+      <p class="inspiration">
+        Design inspired by <a href="https://posthog.com/" target="_blank" rel="noopener" class="ph-link">PostHog 🦔</a>
+      </p>
+    </footer>
   </div>
 </body>
-
 </html>
