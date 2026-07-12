@@ -3,21 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fadhil Hanri — App & Web Developer</title>
-  <meta name="description" content="Portfolio of Fadhil Hanri Kamarz, iOS and Web Developer. Focused on SwiftUI, SwiftData, SvelteKit, and clean architectures.">
+  <title>Fadhil Hanri — Technical Logs & Portfolio</title>
+  <meta name="description" content="Engineering logs, technical deep dives, and architecture portfolios of Fadhil Hanri, iOS and Web Developer.">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="icons/personal-computer.ico">
-  <script src="js/app.js" defer></script>
 </head>
 
 <body>
-  <div class="shell">
+  <div class="container">
     <header>
       <nav>
-        <a href="#home" class="brand">fadhil_hanri<span class="cursor">█</span></a>
-        <div class="links">
-          <a href="#home" class="active">Home</a>
-          <a href="#projects">Projects</a>
+        <a href="https://fadhilhaka.github.io" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="#logs">Logs</a>
           <a href="#capabilities">Capabilities</a>
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
@@ -25,398 +23,204 @@
       </nav>
     </header>
 
-    <div class="window-frame" id="retro-window">
-      <div class="window-header">
-        <div class="window-title-group">
-          <span class="window-icon">🗂️</span>
-          <span class="window-title">index.md</span>
+    <main>
+      <!-- HERO -->
+      <section class="hero">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          <span>Building in public</span>
         </div>
-        <div class="window-controls">
-          <button class="win-btn minimize" aria-label="Minimize">_</button>
-          <button class="win-btn resize" aria-label="Resize">◻</button>
-          <button class="win-btn close" aria-label="Close">×</button>
-        </div>
-      </div>
-      
-      <main class="window-content">
-        <!-- HOME SECTION -->
-        <section id="home-section" class="tab-content active">
-          <div class="hero">
-            <div class="status-badge">
-              <span class="status-dot"></span>
-              <span>Building in public</span>
+        <h1>Technical Logs & Engineering Portfolio</h1>
+        <p>
+          I'm Fadhil Hanri, an iOS and Frontend Web Developer. I design and build local-first mobile applications and performant client-side web interfaces.
+        </p>
+        <p>
+          Below are the architectural summaries, algorithmic breakdowns, and design choices behind my primary shipping projects.
+        </p>
+      </section>
+
+      <!-- TECHNICAL LOGS -->
+      <section id="logs">
+        <h2>Technical Logs</h2>
+        <div class="articles-list">
+          <!-- Silsilah -->
+          <article class="article-item">
+            <div class="article-meta">
+              <span class="article-date">July 12, 2026</span>
+              <span class="article-read-time">6 min read</span>
             </div>
-            <h1>Hi, I'm Fadhil. <br>I build apps.</h1>
-            <p>
-              Mobile and web developer crafting useful, well-designed digital products. 
-              Creator of Silsilah - Family Tree, and currently developing Neraca.
+            <h3><a href="posts/silsilah-deep-dive.html">Silsilah — Solving Graph Traversal & Relational SwiftData Models</a></h3>
+            <p class="article-excerpt">
+              Designing a cross-platform family tree editor with complex node relationships, schema migrations, and canvas gesture scaling in SwiftUI and Kotlin Compose.
             </p>
-          </div>
-          
-          <div class="section-head">
-            <h2>Featured work</h2>
-            <a href="#projects">All projects →</a>
-          </div>
-          
-          <div class="grid grid-2col">
-            <!-- Silsilah Preview Card -->
-            <article class="project-card">
-              <div class="project-head">
-                <h3>Silsilah</h3>
-              </div>
-              <p class="tagline">Genealogy & family tree builder</p>
-              <p class="desc">
-                A cross-platform family tree application to build, visualize, and explore genealogy. Released on iOS and Web.
-              </p>
-              <div class="tech-pill-list">
-                <span>SwiftUI</span>
-                <span>Kotlin</span>
-                <span>SvelteKit</span>
-                <span>SwiftData</span>
-              </div>
-            </article>
+            <div class="article-tags">
+              <span>SwiftUI</span>
+              <span>Kotlin</span>
+              <span>SvelteKit</span>
+              <span>SwiftData</span>
+            </div>
+          </article>
 
-            <!-- Neraca Preview Card -->
-            <article class="project-card">
-              <div class="project-head">
-                <h3>Neraca</h3>
-              </div>
-              <p class="tagline">Personal finance, simplified</p>
-              <p class="desc">
-                An iOS personal finance tracker for managing wallets, transactions, budgets, and savings goals.
-              </p>
-              <div class="tech-pill-list">
-                <span>Swift</span>
-                <span>SwiftUI</span>
-                <span>SwiftData</span>
-              </div>
-            </article>
-          </div>
-        </section>
+          <!-- Neraca -->
+          <article class="article-item">
+            <div class="article-meta">
+              <span class="article-date">July 10, 2026</span>
+              <span class="article-read-time">4 min read</span>
+            </div>
+            <h3><a href="posts/neraca-deep-dive.html">Neraca — High-Precision Transaction Aggregations in Swift</a></h3>
+            <p class="article-excerpt">
+              Minimizing main-thread lag for local-first account ledgers using SwiftData query descriptors and high-precision decimal arithmetic.
+            </p>
+            <div class="article-tags">
+              <span>Swift</span>
+              <span>SwiftUI</span>
+              <span>SwiftData</span>
+            </div>
+          </article>
 
-        <!-- PROJECTS SECTION -->
-        <section id="projects-section" class="tab-content">
-          <div class="page-header">
-            <h1>Projects</h1>
-            <p class="lead">Things I've architected, built, and shipped.</p>
-          </div>
+          <!-- WhatsApp Dashboard -->
+          <article class="article-item">
+            <div class="article-meta">
+              <span class="article-date">July 05, 2026</span>
+              <span class="article-read-time">5 min read</span>
+            </div>
+            <h3><a href="posts/whatsapp-dashboard-deep-dive.html">WhatsApp Dashboard — Privacy-First Chat Log Parsing via JavaScript</a></h3>
+            <p class="article-excerpt">
+              Engineering a high-speed text processing engine running fully client-side to map message trends and emoji distributions with zero external charting dependencies.
+            </p>
+            <div class="article-tags">
+              <span>JavaScript</span>
+              <span>HTML5 / CSS3</span>
+              <span>Data Vis</span>
+            </div>
+          </article>
+        </div>
+      </section>
 
-          <div class="grid">
-            <!-- Silsilah - Family Tree -->
-            <article class="project-card">
-              <div class="project-head">
-                <h3>Silsilah — Family Tree</h3>
-              </div>
-              <p class="tagline">Genealogy & family tree builder</p>
-              <p class="desc">
-                A cross-platform family tree application to build, visualize, and explore your genealogy. Released on iOS and Web, with the Android app launching soon.
-              </p>
-              
-              <div class="tech-breakdown-details">
-                <h4>Tech Stack Focus</h4>
-                <ul>
-                  <li><strong>SwiftUI</strong>: Custom relational canvas utilizing line-drawing paths (Bézier curves) for family connections with responsive pan/zoom gesture interaction.</li>
-                  <li><strong>SwiftData</strong>: Deep relational data graphs representing parents, children, and marriages, featuring custom cascading delete rules and schema integrity.</li>
-                  <li><strong>Kotlin</strong>: Native Android layer with Jetpack Compose, optimized for rendering complex tree layouts.</li>
-                  <li><strong>SvelteKit</strong>: High-efficiency web version designed with a custom grid system to ensure accessibility and SEO indexability of historical branches.</li>
-                </ul>
-              </div>
-
-              <div class="links-container">
-                <a href="https://apps.apple.com/id/app/silsilah-family-tree/id6784531748" target="_blank" rel="noopener" class="link-item">App Store ↗</a>
-                <a href="https://silsilah-familytree.com/" target="_blank" rel="noopener" class="link-item">Website ↗</a>
-              </div>
-
-              <div class="tech-pill-list">
-                <span>SwiftUI</span>
-                <span>Kotlin</span>
-                <span>SvelteKit</span>
-                <span>SwiftData</span>
-              </div>
-            </article>
-
-            <!-- Neraca -->
-            <article class="project-card">
-              <div class="project-head">
-                <h3>Neraca</h3>
-              </div>
-              <p class="tagline">Personal finance, simplified</p>
-              <p class="desc">
-                An iOS personal finance app designed to track wallets, transactions, budgets, debts, and savings goals.
-              </p>
-              
-              <div class="tech-breakdown-details">
-                <h4>Tech Stack Focus</h4>
-                <ul>
-                  <li><strong>SwiftUI</strong>: Modular UI panels with dynamic widgets, gauge charts for budget utilization, and custom transition animations.</li>
-                  <li><strong>SwiftData</strong>: Highly optimized query descriptors to filter transactions and aggregate wallet balances in real-time.</li>
-                  <li><strong>Swift (Core)</strong>: Built on decimal arithmetic architecture to prevent floating-point rounding discrepancies during multi-currency calculations.</li>
-                </ul>
-              </div>
-
-              <div class="tech-pill-list">
-                <span>Swift</span>
-                <span>SwiftUI</span>
-                <span>SwiftData</span>
-              </div>
-            </article>
-
-            <!-- WhatsApp Dashboard -->
-            <article class="project-card">
-              <div class="project-head">
-                <h3>WhatsApp Dashboard</h3>
-              </div>
-              <p class="tagline">Chat statistics & analytics</p>
-              <p class="desc">
-                An interactive dashboard to visualize and analyze exported WhatsApp chat logs, highlighting communication patterns, active hours, and emoji distributions.
-              </p>
-              
-              <div class="tech-breakdown-details">
-                <h4>Tech Stack Focus</h4>
-                <ul>
-                  <li><strong>JavaScript (ES6+)</strong>: A client-side regex parsing engine that processes huge chat files on the fly, keeping all data fully private without leaving the user's browser.</li>
-                  <li><strong>HTML5 Canvas / SVG</strong>: Rendered interactive charts showing message frequencies, hourly active usage heatmaps, and SVG-based word distributions.</li>
-                  <li><strong>Modern CSS</strong>: Responsive layout designed with responsive layout structures and scroll containers.</li>
-                </ul>
-              </div>
-
-              <div class="tech-pill-list">
-                <span>JavaScript</span>
-                <span>HTML5 / CSS3</span>
-                <span>Data Vis</span>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <!-- CAPABILITIES SECTION -->
-        <section id="capabilities-section" class="tab-content">
-          <div class="page-header">
-            <h1>Capabilities</h1>
-            <p class="lead">My technical capabilities, architecture patterns, and engineering skills.</p>
-          </div>
-
-          <p class="capabilities-intro">
-            I specialize in developing local-first mobile applications and premium web interfaces. Here are my main fields of expertise:
-          </p>
-
-          <div class="capability-block">
-            <h3>📱 Mobile Architecture & Development</h3>
-            <p>Building offline-first applications with scalable, high-performance architectures.</p>
-            <div class="capability-details">
-              <div class="cap-item">
-                <h4>Clean Architecture & VIP/MVVM</h4>
-                <p>Ensuring testability, decoupling, and clear separation of concerns in complex mobile applications.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Local-First Persistence</h4>
-                <p>Using SwiftData and SQLite to model complex relational data graphs with low-latency responsiveness.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Concurrency & Threading</h4>
-                <p>Implementing Swift Concurrency (Actors, async/await) to keep user interfaces smooth at 60 FPS.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Performance Profiling</h4>
-                <p>Tracking CPU load, memory footprints, and resolving complex ARC retain cycles using Instruments.</p>
-              </div>
+      <!-- CAPABILITIES -->
+      <section id="capabilities">
+        <h2>Technical Capabilities</h2>
+        <div class="capabilities-grid">
+          <div class="capability-card">
+            <h3>📱 Mobile Engineering</h3>
+            <p>Architecting scalable and offline-first mobile systems using native toolchains.</p>
+            <div class="capability-tech-list">
+              <span class="tech-pill">Swift</span>
+              <span class="tech-pill">SwiftUI</span>
+              <span class="tech-pill">Kotlin</span>
+              <span class="tech-pill">Jetpack Compose</span>
+              <span class="tech-pill">MVVM / VIP</span>
+              <span class="tech-pill">Clean Architecture</span>
             </div>
           </div>
 
-          <div class="capability-block">
-            <h3>💻 Web Frontend Engineering</h3>
-            <p>Creating performant, beautiful, and accessible web experiences.</p>
-            <div class="capability-details">
-              <div class="cap-item">
-                <h4>Advanced Layout & Typography</h4>
-                <p>Expertise in CSS Grid, Flexbox, Container Queries (`@container`), and fluid viewport-scaling designs.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Modern Web Frameworks</h4>
-                <p>Building reactive components with SvelteKit and optimized Vanilla JS for lightweight micro-interactions.</p>
-              </div>
-              <div class="cap-item">
-                <h4>High Fidelity Interactions</h4>
-                <p>Implementing retro terminal designs, layouts, custom transitions, and physics-based drag states.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Accessibility & SEO</h4>
-                <p>Adhering to WCAG AA color contrast guidelines, utilizing semantic HTML elements, and configuring SEO meta headers.</p>
-              </div>
+          <div class="capability-card">
+            <h3>🗄️ Persistence & Local Data</h3>
+            <p>Structuring relational models and query filters for offline application performance.</p>
+            <div class="capability-tech-list">
+              <span class="tech-pill">SwiftData</span>
+              <span class="tech-pill">CoreData</span>
+              <span class="tech-pill">SQLite</span>
+              <span class="tech-pill">Graph Relationships</span>
+              <span class="tech-pill">Data Migrations</span>
             </div>
           </div>
 
-          <div class="capability-block">
-            <h3>⚙️ Product & Process</h3>
-            <p>Translating business objectives and user experience concepts into running software.</p>
-            <div class="capability-details">
-              <div class="cap-item">
-                <h4>UX Prototyping & Design</h4>
-                <p>Wireframing layouts, designing application icons and vector SVG resources.</p>
-              </div>
-              <div class="cap-item">
-                <h4>Agile & OKRs</h4>
-                <p>Working efficiently in Scrum/Agile environments, aligning features with OKRs (Objectives and Key Results).</p>
-              </div>
+          <div class="capability-card">
+            <h3>💻 Frontend Web Engineering</h3>
+            <p>Designing modern, responsive layout layers with a strong focus on accessibility.</p>
+            <div class="capability-tech-list">
+              <span class="tech-pill">JavaScript (ES6+)</span>
+              <span class="tech-pill">SvelteKit</span>
+              <span class="tech-pill">CSS Grid & Flex</span>
+              <span class="tech-pill">Container Queries</span>
+              <span class="tech-pill">HTML5 Semantic DOM</span>
             </div>
           </div>
 
-          <div class="tech-level-grid">
-            <span class="level-label">Expert</span>
-            <div class="level-skills">
-              <span>Swift</span> <span>SwiftUI</span> <span>JavaScript</span> <span>HTML5</span> <span>CSS3</span> <span>UI/UX Design</span>
-            </div>
-
-            <span class="level-label">Proficient</span>
-            <div class="level-skills">
-              <span>Kotlin</span> <span>SvelteKit</span> <span>SwiftData</span> <span>SQLite</span> <span>Git</span> <span>Scrum</span>
-            </div>
-
-            <span class="level-label">Patterns</span>
-            <div class="level-skills">
-              <span>MVVM</span> <span>VIP</span> <span>Clean Architecture</span> <span>MVC</span> <span>Local-First</span>
+          <div class="capability-card">
+            <h3>🎨 Design & Strategy</h3>
+            <p>Prototyping fluid user interfaces and coordinating technical workflows.</p>
+            <div class="capability-tech-list">
+              <span class="tech-pill">Figma UI/UX</span>
+              <span class="tech-pill">SVG Layouts</span>
+              <span class="tech-pill">Agile / Scrum</span>
+              <span class="tech-pill">OKR Alignment</span>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- ABOUT SECTION -->
-        <section id="about-section" class="tab-content">
-          <div class="page-header">
-            <h1>About Me</h1>
+      <!-- ABOUT -->
+      <section id="about">
+        <h2>About Me</h2>
+        <p>
+          I'm Fadhil Hanri Kamarz, a Web and iOS Developer based in Jakarta. 
+        </p>
+        <p>
+          My academic background is in petroleum engineering, but my passion lies in technology. Driven by the philosophy of "Do what you love", I transitioned into software development. I started my journey by mastering HTML and JavaScript because the tools were lightweight, highly accessible, and run on any laptop.
+        </p>
+        <p>
+          Today, I specialize in building local-first applications, native mobile architectures, and custom data parsers.
+        </p>
+
+        <h3>Professional Timeline</h3>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-date">Feb 2020 - Present</div>
+            <h4 class="timeline-role">Mobile Application Developer</h4>
+            <div class="timeline-company">PT. Bhinneka Mentari Dimensi — Central Jakarta</div>
+            <p class="timeline-desc">Architecting and building production native mobile applications, optimizing offline sync behaviors, and creating fluid interfaces.</p>
           </div>
 
-          <p class="about-p">
-            I'm Fadhil Hanri Kamarz, a Web and iOS Developer.
-            My academic background is in petroleum engineering, but I followed my passion for tech. Inspired by the principle of "Do what you love", I challenged myself to transition into software development, starting with the accessible foundations of HTML and JavaScript.
-          </p>
-
-          <p class="about-p">
-            Since then, I've spent years building mobile apps and responsive dashboards, focusing on local data models, interactive visualizations, and fluid layouts.
-          </p>
-
-          <h2>Career Timeline</h2>
-          <div class="timeline">
-            <div class="timeline-event">
-              <div class="event-date">Feb 2020 - Present</div>
-              <h3 class="event-role">Mobile Application Developer</h3>
-              <div class="event-company">PT. Bhinneka Mentari Dimensi — Central Jakarta</div>
-              <p class="event-desc">Focusing on modern native mobile application development, building production applications, optimizing local data storage, and crafting rich interfaces.</p>
-            </div>
-
-            <div class="timeline-event">
-              <div class="event-date">Apr 2019 - Dec 2019</div>
-              <h3 class="event-role">iOS Developer</h3>
-              <div class="event-company">PT. Animo Resto Primera — South Jakarta</div>
-              <p class="event-desc">Developed client-side features for iOS platforms, working on responsive views, layout designs, and modular network integrations.</p>
-            </div>
-
-            <div class="timeline-event">
-              <div class="event-date">Jun 2018 - Mar 2019</div>
-              <h3 class="event-role">Junior Developer</h3>
-              <div class="event-company">Apple Developer Academy | Indonesia — South Tangerang</div>
-              <p class="event-desc">Learned native iOS development, professional app design, scrum workflows, and collaborated on cross-functional team projects to deliver high-quality apps.</p>
-            </div>
+          <div class="timeline-item">
+            <div class="timeline-date">Apr 2019 - Dec 2019</div>
+            <h4 class="timeline-role">iOS Developer</h4>
+            <div class="timeline-company">PT. Animo Resto Primera — South Jakarta</div>
+            <p class="timeline-desc">Implemented client-side features for iOS layouts, designing custom view controls, and building clean network interfaces.</p>
           </div>
 
-          <h2>Interests</h2>
-          <ul class="interests-list">
-            <li>🌐 Tech Trends</li>
-            <li>💻 Creative Coding</li>
-            <li>🎮 Game Design</li>
-            <li>⚽ Football</li>
-            <li>🎨 Graphic Arts</li>
-          </ul>
-        </section>
-
-        <!-- CONTACT SECTION -->
-        <section id="contact-section" class="tab-content">
-          <div class="page-header">
-            <h1>Contact</h1>
-            <p class="lead">Let's build something together.</p>
+          <div class="timeline-item">
+            <div class="timeline-date">Jun 2018 - Mar 2019</div>
+            <h4 class="timeline-role">Junior Developer</h4>
+            <div class="timeline-company">Apple Developer Academy | Indonesia — South Tangerang</div>
+            <p class="timeline-desc">Trained in native iOS engineering, human interface guidelines (HIG), agile development, and collaborative app delivery workflows.</p>
           </div>
+        </div>
+      </section>
 
-          <div class="contact-container">
-            <div>
-              <h2>Contact Details</h2>
-              <ul class="contact-info">
-                <li>
-                  <span class="label">Email</span>
-                  <a href="mailto:fadhilhanri@gmail.com">fadhilhanri@gmail.com</a>
-                </li>
-                <li>
-                  <span class="label">GitHub</span>
-                  <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">github.com/fadhilhaka</a>
-                </li>
-                <li>
-                  <span class="label">LinkedIn</span>
-                  <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">linkedin.com/in/fadhilhanri</a>
-                </li>
-                <li>
-                  <span class="label">Phone</span>
-                  <span>+62 8787 899 1253</span>
-                </li>
-              </ul>
-            </div>
+      <!-- CONTACT -->
+      <section id="contact">
+        <h2>Get in Touch</h2>
+        <p>
+          If you'd like to collaborate, talk about iOS architecture, or discuss a project, feel free to contact me:
+        </p>
+        
+        <div class="contact-box">
+          <h3>Send an Email</h3>
+          <form action="mailto:fadhilhanri@gmail.com" method="post" enctype="text/plain">
+            <label for="form-name">Name</label>
+            <input type="text" id="form-name" name="name" required placeholder="Your Name">
 
-            <div class="contact-form-box">
-              <h3>Send a Message</h3>
-              <form action="mailto:fadhilhanri@gmail.com" method="post" enctype="text/plain">
-                <label for="form-name">Name</label>
-                <input type="text" id="form-name" name="name" required placeholder="Your Name">
+            <label for="form-email">Email</label>
+            <input type="email" id="form-email" name="email" required placeholder="your.email@example.com">
 
-                <label for="form-email">Email</label>
-                <input type="email" id="form-email" name="email" required placeholder="your.email@example.com">
+            <label for="form-message">Message</label>
+            <textarea id="form-message" name="message" rows="5" required placeholder="Type your message here..."></textarea>
 
-                <label for="form-message">Message</label>
-                <textarea id="form-message" name="message" rows="6" required placeholder="Type your message here..."></textarea>
-
-                <button type="submit">Submit Form</button>
-              </form>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-
-    <!-- Desktop Icons (Fallback navigation & OS look) -->
-    <div class="desktop-icons">
-      <a href="#home" class="desktop-icon active">
-        <span class="icon">🏠</span>
-        <span class="label">home.md</span>
-      </a>
-      <a href="#projects" class="desktop-icon">
-        <span class="icon">📁</span>
-        <span class="label">projects.md</span>
-      </a>
-      <a href="#capabilities" class="desktop-icon">
-        <span class="icon">⚡</span>
-        <span class="label">capabilities.md</span>
-      </a>
-      <a href="#about" class="desktop-icon">
-        <span class="icon">👤</span>
-        <span class="label">about.md</span>
-      </a>
-      <a href="#contact" class="desktop-icon">
-        <span class="icon">✉️</span>
-        <span class="label">contact.md</span>
-      </a>
-    </div>
-
-    <!-- Space visible when window minimized -->
-    <div class="desktop-empty-space"></div>
+            <button type="submit">Submit Message</button>
+          </form>
+        </div>
+      </section>
+    </main>
 
     <footer>
-      <div class="footer-content">
-        <p>&copy; 2026 Fadhil Hanri</p>
-        <div class="footer-links">
-          <a href="mailto:fadhilhanri@gmail.com">Email</a>
-          <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
-          <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
-        </div>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="mailto:fadhilhanri@gmail.com">Email</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
       </div>
-      <p class="inspiration">
-        Design inspired by <a href="https://posthog.com/" target="_blank" rel="noopener" class="ph-link">PostHog 🦔</a>
-      </p>
     </footer>
   </div>
 </body>

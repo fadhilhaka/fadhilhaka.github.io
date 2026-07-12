@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Dashboard: Privacy-First Chat Log Parsing via JavaScript — Fadhil Hanri</title>
+  <meta name="description" content="A technical log on engineering a high-performance client-side WhatsApp chat log parser in JavaScript, focusing on regex and zero-dependency SVG data vis.">
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="../icons/personal-computer.ico">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="../index.html" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="../index.html#logs">Logs</a>
+          <a href="../index.html#capabilities">Capabilities</a>
+          <a href="../index.html#about">About</a>
+          <a href="../index.html#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-header">
+          <a href="../index.html" class="article-back-link">← Back to Logs</a>
+          <h1 class="article-title">WhatsApp Dashboard — Privacy-First Chat Log Parsing via JavaScript</h1>
+          <div class="article-meta-large">
+            <span>July 05, 2026</span>
+            <span>•</span>
+            <span>5 min read</span>
+            <span>•</span>
+            <span>JavaScript, Client-Side, Data Vis, CSS Grid</span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <p>
+            Chat history logs are highly sensitive documents containing names, phone numbers, and private conversations. Standard analytics apps resolve parsing by sending raw log text files to a cloud server. For the WhatsApp Dashboard, I took a <strong>privacy-first approach</strong>: engineering a parser that runs completely client-side in the user's browser, ensuring no data ever gets uploaded.
+          </p>
+          <p>
+            In this log, I'll show how to parse varying multiline OS text logs with optimized JavaScript regular expressions and render custom, responsive visual charts with zero external charting dependencies.
+          </p>
+
+          <h2>1. The Regex Parsing Pipeline</h2>
+          <p>
+            WhatsApp exports logs differently depending on the operating system. iOS exports logs with bracketed dates (e.g., <code>[12/07/26, 09:30:15] Name: Message</code>), while Android uses dash separators (e.g., <code>12/07/2026, 09:30 - Name: Message</code>).
+          </p>
+          <p>
+            Additionally, users frequently send multiline messages (e.g., messages with carriage returns). The parser must recognize when a line is a continuation of the previous message rather than the start of a new one.
+          </p>
+
+          <pre><code>// Parsing rules for iOS and Android
+const IOS_PATTERN = /^\[(\d{2}\/\d{2}\/\d{2,4}),\s(\d{2}:\d{2}(?::\d{2})?)\]\s([^:]+):\s([\s\S]*)$/;
+const ANDROID_PATTERN = /^(\d{2}\/\d{2}\/\d{2,4}),\s(\d{2}:\d{2})\s-\s([^:]+):\s([\s\S]*)$/;
+
+function parseChatLog(rawText) {
+    const lines = rawText.split('\n');
+    const messages = [];
+    let currentMessage = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Check if line matches a new message header
+        const iosMatch = line.match(IOS_PATTERN);
+        const androidMatch = line.match(ANDROID_PATTERN);
+        const match = iosMatch || androidMatch;
+        
+        if (match) {
+            // Push previous message if exists
+            if (currentMessage) messages.push(currentMessage);
+            
+            currentMessage = {
+                date: match[1],
+                time: match[2],
+                sender: match[3].trim(),
+                body: match[4]
+            };
+        } else if (currentMessage) {
+            // Line is a continuation of the previous multiline message
+            currentMessage.body += '\n' + line;
+        }
+    }
+    
+    if (currentMessage) messages.push(currentMessage);
+    return messages;
+}</code></pre>
+
+          <h2>2. Aggregating Analytics Arrays</h2>
+          <p>
+            Once the log is parsed into an array of message structures, the analytics engine builds frequency maps for hourly activity, active weekdays, and emoji occurrences:
+          </p>
+          <pre><code>function analyzeHourlyActivity(messages) {
+    const hourMap = Array(24).fill(0);
+    messages.forEach(msg => {
+        // Extract hour digit (e.g. "09" -> 9)
+        const hour = parseInt(msg.time.split(':')[0], 10);
+        if (!isNaN(hour) && hour >= 0 && hour < 24) {
+            hourMap[hour]++;
+        }
+    });
+    return hourMap;
+}</code></pre>
+
+          <h2>3. Zero-Dependency Charting using Custom SVGs</h2>
+          <p>
+            Loading heavy canvas/chart dependencies (e.g. Chart.js) increases loading latency and security maintenance overhead. To keep the app under 20KB, I designed a reactive SVG generator that renders responsive chart bars dynamically.
+          </p>
+          <p>
+            Here is the implementation for generating a responsive SVG time-series chart from an array of hourly stats:
+          </p>
+
+          <pre><code>function renderSvgChart(hourData) {
+    const maxVal = Math.max(...hourData) || 1;
+    const chartHeight = 120;
+    const barWidth = 18;
+    const barGap = 6;
+    const svgWidth = (barWidth + barGap) * 24;
+    
+    let barsHtml = '';
+    hourData.forEach((val, hour) => {
+        const barHeight = (val / maxVal) * chartHeight;
+        const x = hour * (barWidth + barGap);
+        const y = chartHeight - barHeight;
+        
+        barsHtml += `
+            &lt;rect 
+                x="${x}" 
+                y="${y}" 
+                width="${barWidth}" 
+                height="${barHeight}" 
+                fill="var(--accent-color)" 
+                stroke="var(--border-color)" 
+                stroke-width="1.5"
+                rx="2"
+            &gt;
+                &lt;title&gt;${hour}:00 - ${val} messages&lt;/title&gt;
+            &lt;/rect&gt;
+        `;
+    });
+    
+    return `
+        &lt;svg viewBox="0 0 ${svgWidth} ${chartHeight}" width="100%" height="auto"&gt;
+            ${barsHtml}
+        &lt;/svg&gt;
+    `;
+}</code></pre>
+
+          <h2>4. Hour Heatmaps with CSS Grid</h2>
+          <p>
+            To visualize weekly messaging habits, I used a 7x24 CSS Grid block. Each grid box's background opacity is scaled relative to its messaging frequency, establishing a light and performant visual heatmap without canvas rendering overhead.
+          </p>
+          <pre><code>.heatmap-container {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: 2px;
+  background: var(--border-color);
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  background: var(--accent-color);
+  /* Opacity is set dynamically by JS based on usage weight */
+}</code></pre>
+
+          <h2>Conclusion</h2>
+          <p>
+            This dashboard demonstrates that web tools don't need heavy frameworks or server backends to be powerful. By utilizing native Javascript Regex for text parsing, simple arithmetic maps, and standard SVGs/CSS grids for layout representation, we preserve user privacy and deliver high-performance visual tools.
+          </p>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

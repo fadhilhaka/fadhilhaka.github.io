@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neraca: High-Precision Transaction Aggregations in Swift — Fadhil Hanri</title>
+  <meta name="description" content="An engineering breakdown of Neraca, a local-first personal finance app, detailing thread-safe Decimal calculations and SwiftData background aggregations.">
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="../icons/personal-computer.ico">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="../index.html" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="../index.html#logs">Logs</a>
+          <a href="../index.html#capabilities">Capabilities</a>
+          <a href="../index.html#about">About</a>
+          <a href="../index.html#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-header">
+          <a href="../index.html" class="article-back-link">← Back to Logs</a>
+          <h1 class="article-title">Neraca — High-Precision Transaction Aggregations in Swift</h1>
+          <div class="article-meta-large">
+            <span>July 10, 2026</span>
+            <span>•</span>
+            <span>4 min read</span>
+            <span>•</span>
+            <span>Swift, SwiftUI, SwiftData, Local-First</span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <p>
+            Neraca is an iOS personal finance app built for speed, safety, and reliability. When handling personal finance tracking (wallets, budgets, debts, savings goals), two non-negotiable requirements emerge: <strong>absolute numerical precision</strong> and <strong>zero UI frame stuttering</strong> during database aggregates.
+          </p>
+          <p>
+            In this post, I detail how Neraca prevents floating-point rounding errors using Swift's native <code>Decimal</code> structures and how it aggregates transaction balances in the background using SwiftData's <code>ModelActor</code> concurrency architecture.
+          </p>
+
+          <h2>1. Eliminating Floating-Point Precision Drift</h2>
+          <p>
+            Using floating-point types (like <code>Double</code> or <code>Float</code>) for financial calculations is a dangerous anti-pattern. Because of binary representation constraints, simple operations can drift:
+          </p>
+          <pre><code>// The problem with Double
+let walletBalance: Double = 0.1
+let transaction: Double = 0.2
+print(walletBalance + transaction) // Outputs: 0.30000000000000004</code></pre>
+
+          <p>
+            While a discrepancy of <code>0.00000000000000004</code> seems negligible, compounding these differences across thousands of transactions results in distorted balance ledgers.
+          </p>
+          <p>
+            To solve this, Neraca uses Swift's decimal floating-point arithmetic library (<code>Decimal</code>) across its entire storage and UI layer. <code>Decimal</code> utilizes base-10 representations, eliminating floating-point binary rounding artifacts.
+          </p>
+
+          <pre><code>@Model
+final class Transaction {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var amount: Decimal // High-precision decimal type
+    var date: Date
+    var type: TransactionType // .income or .expense
+    
+    init(title: String, amount: Decimal, date: Date, type: TransactionType) {
+        self.id = UUID()
+        self.title = title
+        self.amount = amount
+        self.date = date
+        self.type = type
+    }
+}</code></pre>
+
+          <h2>2. Offloading Aggregations to SwiftData ModelActors</h2>
+          <p>
+            Aggregating spending totals by categories or calculating net worth requires summing transaction histories. Doing this calculations in-memory on the main thread triggers screen stutters (drops below 60 FPS) when a user has logged thousands of entries over several years.
+          </p>
+          <p>
+            SwiftData solves thread isolation by exposing the <code>ModelActor</code> protocol. In Neraca, I designed a thread-isolated background actor to process database calculations asynchronously:
+          </p>
+
+          <pre><code>import Foundation
+import SwiftData
+
+@globalActor
+actor DatabaseQueryActor {
+    static let shared = DatabaseQueryActor()
+}
+
+@DatabaseQueryActor
+actor FinanceAggregator: ModelActor {
+    nonisolated let modelContainer: ModelContainer
+    nonisolated let modelExecutor: any ModelExecutor
+    
+    init(container: ModelContainer) {
+        self.modelContainer = container
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+        self.modelExecutor = DefaultSerialModelExecutor(modelContext: context)
+    }
+    
+    /// Calculate sum of all transactions within a category
+    func sumCategory(categoryId: UUID, from startDate: Date, to endDate: Date) -> Decimal {
+        let context = modelContext
+        let predicate = #Predicate<Transaction> { transaction in
+            transaction.date >= startDate && 
+            transaction.date <= endDate
+        }
+        
+        let descriptor = FetchDescriptor<Transaction>(predicate: predicate)
+        guard let transactions = try? context.fetch(descriptor) else { return 0 }
+        
+        // Sum using high-precision Decimal reduction
+        return transactions.reduce(Decimal(0)) { total, transaction in
+            total + transaction.amount
+        }
+    }
+}</code></pre>
+
+          <h2>3. Reactive UI Syncing</h2>
+          <p>
+            To integrate these background aggregations cleanly into SwiftUI layouts, Neraca uses the async/await pattern to fetch data from the aggregator actor whenever the transaction store signals a change:
+          </p>
+
+          <pre><code>struct BudgetProgressView: View {
+  @Environment(\.modelContext) private var context
+  @State private var totalSpent: Decimal = 0
+  var categoryId: UUID
+
+  var body: some View {
+      VStack(alignment: .leading) {
+          Text("Category Spending")
+          Text(totalSpent.formatted(.currency(code: "USD")))
+              .font(.title2)
+              .bold()
+      }
+      .task(id: categoryId) {
+          await recalculateBudget()
+      }
+  }
+
+  private func recalculateBudget() async {
+      let container = context.container
+      let aggregator = FinanceAggregator(container: container)
+      let sum = await aggregator.sumCategory(
+          categoryId: categoryId, 
+          from: Date().startOfMonth(), 
+          to: Date()
+      )
+      
+      // Update UI on main thread
+      await MainActor.run {
+          self.totalSpent = sum
+      }
+  }
+}</code></pre>
+
+          <h2>Summary</h2>
+          <p>
+            By designing Neraca to rely entirely on <code>Decimal</code> arithmetic and offloading complex calculations to thread-isolated SwiftData actors, the app remains fast and accurate. This architecture keeps UI operations smooth while ensuring financial data remains consistent.
+          </p>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

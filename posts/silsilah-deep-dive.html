@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silsilah: Solving Graph Traversal & Relational SwiftData Models — Fadhil Hanri</title>
+  <meta name="description" content="An architectural deep dive into Silsilah, a genealogy tree builder, exploring relational schemas in SwiftData and custom Canvas traversal algorithms.">
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="../icons/personal-computer.ico">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="../index.html" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="../index.html#logs">Logs</a>
+          <a href="../index.html#capabilities">Capabilities</a>
+          <a href="../index.html#about">About</a>
+          <a href="../index.html#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-header">
+          <a href="../index.html" class="article-back-link">← Back to Logs</a>
+          <h1 class="article-title">Silsilah — Solving Graph Traversal & Relational SwiftData Models</h1>
+          <div class="article-meta-large">
+            <span>July 12, 2026</span>
+            <span>•</span>
+            <span>6 min read</span>
+            <span>•</span>
+            <span>iOS, SwiftData, Android, Kotlin, Web</span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <p>
+            Silsilah is a cross-platform family tree application designed to let users build, visualize, and interact with complex genealogy graphs. Delivering a local-first user experience across iOS, Android, and Web clients introduced unique architectural challenges, particularly regarding relational database integrity and graph layout rendering.
+          </p>
+          <p>
+            In this log, I'll walk through how I structured the relational database schema in <strong>SwiftData</strong>, resolved cascading deletions on cyclical data configurations, and engineered the layout algorithms for the rendering canvas.
+          </p>
+
+          <h2>1. Relational Modeling with SwiftData</h2>
+          <p>
+            Genealogy trees are graphs rather than simple hierarchies. A person can have multiple marriages, step-children, and complex ancestral loops. SwiftData represents these as linked objects, but its default compiler macros require careful handling to avoid retain cycles and database deadlocks.
+          </p>
+          <p>
+            I structured the schema around two main entities: <code>Person</code> and <code>Marriage</code>. By representing marriages as distinct entities rather than direct connections between people, Silsilah can model children belonging to specific partnerships, divorces, and blended families.
+          </p>
+
+          <pre><code>@Model
+final class Person {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var birthDate: Date?
+    
+    // Relationships
+    @Relationship(deleteRule: .cascade, inverse: \Marriage.husband)
+    var husbandMarriages: [Marriage] = []
+    
+    @Relationship(deleteRule: .cascade, inverse: \Marriage.wife)
+    var wifeMarriages: [Marriage] = []
+    
+    @Relationship(inverse: \Marriage.children)
+    var parentMarriage: Marriage?
+    
+    init(name: String) {
+        self.id = UUID()
+        self.name = name
+    }
+}
+
+@Model
+final class Marriage {
+    @Attribute(.unique) var id: UUID
+    
+    var husband: Person?
+    var wife: Person?
+    
+    @Relationship(deleteRule: .nullify)
+    var children: [Person] = []
+    
+    init(husband: Person?, wife: Person?) {
+        self.id = UUID()
+        self.husband = husband
+        self.wife = wife
+    }
+}</code></pre>
+
+          <h3>Cascading Deletion Rules</h3>
+          <p>
+            To prevent orphaned database records while avoiding cyclical deletion loops (which crash SwiftData's persistent store), the deletion rules are configured as follows:
+          </p>
+          <ul>
+            <li>Deleting a <code>Person</code> cascades and deletes any associated <code>Marriage</code> objects they participated in as husband or wife.</li>
+            <li>Deleting a <code>Marriage</code> does <strong>not</strong> delete the spouses; it merely nullifies their relationship references.</li>
+            <li>Deleting a <code>Marriage</code> nullifies the child references, leaving the children's <code>Person</code> records intact in the system.</li>
+          </ul>
+
+          <h2>2. The Graph Traversal & Coordinate Layout Challenge</h2>
+          <p>
+            Drawing a genealogy tree requires mapping individuals to 2D coordinates <code>(X, Y)</code>. Standard tree-drawing algorithms (e.g., Reingold-Tilford) assume a strict single-root tree structure, which fails when husbands and wives introduce multiple parent lines.
+          </p>
+          <p>
+            Silsilah resolves layout calculations using a depth-first traversal variant that establishes generational columns (Y-axis) and lineage lanes (X-axis):
+          </p>
+
+          <pre><code>// Pseudocode of the coordinate assignment loop
+func calculatePositions(for person: Person, generation: Int, offset: Double) {
+    // 1. Assign generational Y coordinate
+    person.y = Double(generation) * verticalSpacing
+    
+    // 2. Traverse spouses
+    let marriages = person.marriages.sortedByDate()
+    for (index, marriage) in marriages.enumerated() {
+        let spouse = marriage.partner(of: person)
+        spouse.y = person.y
+        spouse.x = person.x + horizontalSpouseSpacing
+        
+        // 3. Coordinate children below spouses
+        let children = marriage.children.sortedByBirthDate()
+        var currentChildOffset = spouse.x - (Double(children.count) * childSpacing / 2)
+        for child in children {
+            calculatePositions(for: child, generation: generation + 1, offset: currentChildOffset)
+            currentChildOffset += childSpacing
+        }
+    }
+}</code></pre>
+
+          <p>
+            To prevent overlapping branches on massive family trees, a secondary "overlap resolver" pass traverses the calculated tree, measures collisions between sub-trees, and pushes colliding branches horizontally using dynamic spacers.
+          </p>
+
+          <h2>3. Custom Drawing with Bezier Paths</h2>
+          <p>
+            In SwiftUI, rendering connection lines dynamically between spouse blocks and child blocks is achieved using a custom <code>Shape</code> structure drawing smooth Bezier curves.
+          </p>
+
+          <pre><code>struct ConnectionLine: Shape {
+    var from: CGPoint
+    var to: CGPoint
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: from)
+        
+        // Calculate control points for smooth S-curves
+        let midY = (from.y + to.y) / 2
+        let control1 = CGPoint(x: from.x, y: midY)
+        let control2 = CGPoint(x: to.x, y: midY)
+        
+        path.addCurve(to: to, control1: control1, control2: control2)
+        return path
+    }
+}</code></pre>
+
+          <h2>4. Cross-Platform Adaptations</h2>
+          <p>
+            While iOS runs the drawing operations on a GPU-backed SwiftUI <code>Canvas</code>, the Android client uses <strong>Jetpack Compose Canvas</strong>. I optimized Compose canvas draw cycles by wrapping the layout computations inside static state snapshots, ensuring that pan-and-zoom actions do not trigger garbage collection spikes.
+          </p>
+          <p>
+            For the web frontend built with <strong>SvelteKit</strong>, using standard HTML5 Canvas would restrict web accessibility. Instead, I designed the web tree viewer using an absolute-positioned DOM grid. This design allows screen readers to navigate parent-child hierarchies via native HTML structure, while enabling search engine bots to index historical names and branches.
+          </p>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
