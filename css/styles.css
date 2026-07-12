@@ -206,6 +206,10 @@ nav {
   text-decoration: underline;
 }
 
+section {
+  scroll-margin-top: 2rem;
+}
+
 /* Hero Section */
 .hero {
   margin-bottom: 3rem;
@@ -670,6 +674,10 @@ footer {
 
   .contact-box {
     max-width: 36rem;
+  }
+
+  section {
+    scroll-margin-top: 5rem;
   }
 }
 
