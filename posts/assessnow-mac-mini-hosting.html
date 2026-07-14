@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AssessNow: Hosting a Proctored Exam Platform on a Mac mini — Fadhil Hanri</title>
+  <meta name="description" content="A mentoring log on how AssessNow runs proctored technical assessments securely using Docker, Caddy, Cloudflare Tunnel, and PostgreSQL on a Mac mini.">
+  <link rel="stylesheet" href="../css/styles.css?v=3">
+  <link rel="icon" href="../icons/personal-computer.ico">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="../index.html" class="brand">fadhil_hanri<span class="cursor">█</span></a>
+        <div class="nav-links">
+          <a href="../index.html#logs">Logs</a>
+          <a href="../index.html#capabilities">Capabilities</a>
+          <a href="../index.html#about">About</a>
+          <a href="../index.html#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <article>
+        <div class="article-header">
+          <a href="../index.html" class="article-back-link">← Back to Logs</a>
+          <h1 class="article-title">AssessNow — Hosting a Proctored Exam Platform on a Mac mini</h1>
+          <div class="article-meta-large">
+            <span>July 14, 2026</span>
+            <span>•</span>
+            <span>11 min read</span>
+            <span>•</span>
+            <span>Docker, Caddy, Cloudflare Tunnel, PostgreSQL, Self-Hosting, macOS, DevOps</span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <blockquote>
+            <p>A mentoring log, not a runbook. Each section is one small, practicable part: what the piece is, why it's there, the actual config that's running, one thing you can do right now to see it work, and the check that proves you understood it.</p>
+          </blockquote>
+          
+          <p>
+            AssessNow runs proctored technical assessments — candidates open a link, grant camera/mic/screen, answer questions, and run code that the platform executes. That code is <em>untrusted code from strangers on the internet</em>. And the whole thing is hosted on a Mac mini sitting in a room, on a residential-ish uplink, with no open ports on the router and no cloud hosting bill.
+          </p>
+          <p>
+            That combination — public HTTPS, untrusted code execution, zero inbound firewall holes, one box — is what makes the hosting interesting. Here's how the pieces fit.
+          </p>
+
+          <hr />
+
+          <h2>0. The mental model: the request path, end to end</h2>
+          <p>Before any config, hold this in your head. Everything below is a detail of this diagram.</p>
+          <pre><code>Candidate browser
+   │  HTTPS  candidate.assessnow.online
+   ▼
+Cloudflare edge  ── TLS terminated here ──┐
+   │                                       │  (apex assessnow.online → Cloudflare Pages,
+   │  tunnel (outbound-only, from the mini)│   the marketing site — never touches the mini)
+   ▼
+cloudflared  (container on the mini)
+   │  http://caddy:4820
+   ▼
+Caddy  (edge proxy, host-based routing)
+   ├── recruiter.assessnow.online → dashboard:80  ─┐
+   └── candidate.assessnow.online → frontend:80   ─┤ each of these is *itself* a Caddy
+                                                    │ serving a built SPA and proxying
+                                                    │ /api + /auth → api:4820
+                                                    ▼
+                                              api (Node/Express) ──▶ postgres
+                                                    │              └▶ redis
+                                                    ▼
+                                              redis queue ──▶ worker  (untrusted code runs HERE,
+                                                                       on a network with no internet)</code></pre>
+
+          <p>Two claims in that diagram are the whole design:</p>
+          <ol>
+            <li><strong>Nothing on the mini listens to the internet.</strong> The mini dials <em>out</em> to Cloudflare.</li>
+            <li><strong>The container that runs candidate code cannot reach the internet or the database.</strong> It can reach exactly one thing: Redis.</li>
+          </ol>
+          <p>Everything else is plumbing in service of those two.</p>
+
+          <hr />
+
+          <h2>1. Cloudflare Tunnel — public HTTPS with zero open ports</h2>
+          <p><strong>The idea.</strong> Normally, "put this on the internet" means: get a static IP or dynamic DNS, forward ports 80/443 on the router to the machine, get a TLS cert, and now your box is being port-scanned by everyone forever. A tunnel inverts it. A daemon on the mini opens a <strong>persistent outbound connection</strong> to Cloudflare's edge. Traffic arrives at Cloudflare, and Cloudflare pushes it <em>down the connection the mini already opened</em>. The router never accepts an inbound connection. There is no port to scan.</p>
+          <p><strong>What's running</strong> (<code>cloudflared-config.yml</code>):</p>
+          <pre><code>tunnel: assessnow
+credentials-file: /etc/cloudflared/1922b192-....json
+
+ingress:
+  # The apex (assessnow.online) is served by Cloudflare Pages (marketing
+  # site) and is intentionally not routed through this tunnel.
+  - hostname: recruiter.assessnow.online
+    service: http://caddy:4820
+  - hostname: candidate.assessnow.online
+    service: http://caddy:4820
+  - service: http_status:404</code></pre>
+          <p><code>ingress</code> is an <strong>ordered match list</strong> — first hostname that matches wins, and the last entry (no <code>hostname</code>) is the catch-all. The <code>http_status:404</code> at the bottom is deliberate: anything reaching the tunnel with a Host header you didn't authorise gets a 404, not a peek at your app.</p>
+          <p>The credentials file is the tunnel's identity — it's how Cloudflare knows this daemon is allowed to serve <code>*.assessnow.online</code>. It lives on the host, not in the image:</p>
+          <pre><code>volumes:
+  - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+  - /Users/fadhilhanri/.cloudflared/1922b192-....json:/etc/cloudflared/...json:ro
+  - /Users/fadhilhanri/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro</code></pre>
+          <p>Read-only bind mounts from the host. Rebuild the image a hundred times; the secret never enters a layer.</p>
+          <p><strong>The consequence people miss:</strong> TLS is terminated at Cloudflare, not on the mini. Everything from <code>cloudflared</code> inward is <strong>plain HTTP</strong>. That's why the Caddyfile says <code>:4820</code> and not <code>assessnow.online { tls ... }</code> — Caddy's famous auto-HTTPS is deliberately <em>not</em> used here. It would be pointless (Cloudflare already did it) and impossible (no port 80 reachable for the ACME challenge).</p>
+          
+          <div class="practice">
+            <b>Practice — 5 min</b>
+            <pre style="margin-top:8px; margin-bottom:8px"><code>docker compose logs cloudflared | grep -i "registered\|connection"</code></pre>
+            <p>You should see four registered connections to two Cloudflare data centres (the deploy log recorded <code>cgk</code>/<code>sin</code> — Jakarta and Singapore). Four, not one: Cloudflare wants redundancy across colos so a single edge blip doesn't drop your exam.</p>
+            <p style="margin-top:1rem"><strong>Check yourself:</strong> if you <code>curl https://assessnow.online</code> (the apex), which machine answers? Not the mini. Trace why in the ingress list above.</p>
+          </div>
+
+          <hr />
+
+          <h2>2. Caddy — two layers of routing, and why there are <em>three</em> Caddyfiles</h2>
+          <p>This is the part that confuses people reading the repo for the first time. There are three Caddy configs, and they do different jobs.</p>
+          
+          <h3>Layer 1: the edge Caddy (<code>/Caddyfile</code>) — routes by <strong>hostname</strong></h3>
+          <pre><code>:4820 {
+	encode gzip
+
+	@recruiter host recruiter.assessnow.online
+	handle @recruiter {
+		reverse_proxy dashboard:80
+	}
+
+	@candidate host candidate.assessnow.online
+	handle @candidate {
+		header {
+			-Server
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		}
+		reverse_proxy frontend:80
+	}
+
+	handle { ...same headers... reverse_proxy frontend:80 }   # fallback
+}</code></pre>
+          <p>One port, two hostnames, two different apps. <code>dashboard:80</code> and <code>frontend:80</code> are <strong>Docker DNS names</strong> — inside a Compose network, the service name resolves to the container. No IPs, no ports on the host.</p>
+          <p>Note <code>-Server</code>: strip the header that tells an attacker what you're running. Free, do it.</p>
+
+          <h3>Layer 2: the per-app Caddy (<code>frontend/Caddyfile</code>, <code>dashboard/Caddyfile</code>) — routes by <strong>path</strong></h3>
+          <p>Each frontend image is a two-stage build: Node builds the SPA, then the artifacts get copied into a <code>caddy:2</code> image.</p>
+          <pre><code>FROM node:20-bookworm-slim AS build
+...
+RUN npx vite build --base=/
+
+FROM caddy:2
+COPY --from=build /app/dist /srv
+COPY frontend/Caddyfile /etc/caddy/Caddyfile</code></pre>
+          
+          <p>And that inner Caddyfile:</p>
+          <pre><code>:80 {
+	@api path /auth/* /api/*
+	handle @api {
+		reverse_proxy api:4820
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html   # SPA fallback — /t/&lt;token&gt; is a client route
+		file_server
+	}
+}</code></pre>
+          <p><strong>Why not just point the edge Caddy at the API directly?</strong> Because of one word: <strong>same-origin</strong>. The candidate app is served from <code>candidate.assessnow.online</code>, and its API calls go to <code>candidate.assessnow.online/api/*</code>. Same origin → the session cookie is sent without <code>SameSite</code> gymnastics, no CORS preflights, no <code>credentials: 'include'</code> bugs at 2 a.m. before an exam window. The API <em>appears</em> to live at the same address as the app; it just doesn't.</p>
+          <p>The <code>try_files {path} /index.html</code> line is what makes <code>/t/&lt;abc123&gt;</code> work. That path doesn't exist on disk — it's a client-side route. Without the fallback, every candidate link is a 404.</p>
+
+          <div class="practice">
+            <b>Practice — 10 min</b>
+            <p>Trace, on paper, every hop for <code>GET https://candidate.assessnow.online/api/invite/xyz</code>:</p>
+            <blockquote style="margin: 0.5rem 0;">
+              <p>browser → Cloudflare edge (TLS ends) → tunnel → <code>cloudflared</code> → <code>caddy:4820</code> (matches <code>@candidate</code>, adds headers) → <code>frontend:80</code> (matches <code>@api</code> on path) → <code>api:4820</code> → Express route in <code>server/src/routes/candidate.js</code> → Postgres.</p>
+            </blockquote>
+            <p>Six hops. Now do the same for <code>GET https://candidate.assessnow.online/t/xyz</code> and notice it stops at the fifth box, in <code>file_server</code>, and never touches the API. That difference is the whole reason the SPA fallback exists.</p>
+          </div>
+
+          <hr />
+
+          <h2>3. Compose as the unit of deployment</h2>
+          <p>The mini doesn't "have Node installed and run the app." It runs one command:</p>
+          <pre><code>docker compose up -d --build</code></pre>
+          <p>Every service — Postgres, Redis, API, two worker pools, two frontends, Caddy, the tunnel — is declared in <code>docker-compose.yml</code>. That file <em>is</em> the deployment. Three things in it are worth internalising.</p>
+
+          <h3><code>restart: unless-stopped</code></h3>
+          <p>The power flickers. The mini reboots. Docker's daemon comes back, and every container marked <code>unless-stopped</code> comes back with it. This is what replaced the old Electron deploy's embarrassing manual step: <em>"after every reboot, unlock the app and press Start runner."</em> Now the only manual step is that the host must reach a desktop session (FileVault, auto-login) with the container runtime set to launch at login.</p>
+
+          <h3><code>depends_on</code> with <strong>conditions</strong> (not just names)</h3>
+          <pre><code>api:
+  depends_on:
+    postgres:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully</code></pre>
+          <p>Plain <code>depends_on: [postgres]</code> only waits for the container to <em>start</em> — which for Postgres means "the process exists," not "the database accepts connections." That's a classic startup race: the API boots, connects, gets <code>ECONNREFUSED</code>, crashes, restarts, and you learn to live with a noisy log. The fix is Postgres's healthcheck:</p>
+          <pre><code>healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U assessnow"]
+  interval: 5s
+  timeout: 3s
+  retries: 20</code></pre>
+          <p><code>condition: service_healthy</code> waits for <em>that</em> to pass. Startup order becomes a fact, not a hope.</p>
+
+          <h3>The one-off <code>migrate</code> job</h3>
+          <pre><code>migrate:
+  command: ["node", "scripts/migrate.js"]
+  depends_on:
+    postgres: { condition: service_healthy }
+  restart: "no"</code></pre>
+          <p>Schema migrations don't run inside the API's boot sequence. They run in a <strong>separate container that runs once and exits</strong>, and both <code>api</code> and <code>analysis-worker</code> wait on <code>service_completed_successfully</code>.</p>
+          <p>Why bother? Because the day you run <code>docker compose up -d --scale api=3</code>, three API containers boot simultaneously and three of them try to <code>ALTER TABLE</code>. Migration tools usually take an advisory lock, so you <em>probably</em> survive — but "probably" is not a deployment strategy. Hoisting migrations into a one-off job means there is exactly one migrator, always, by construction. (The comment in the file labels this <code>OPS-1</code>.)</p>
+
+          <div class="practice">
+            <b>Practice — 5 min</b>
+            <pre style="margin-top:8px; margin-bottom:8px"><code>docker compose ps            # who's up, who's healthy
+docker compose logs migrate  # ran once, exited 0</code></pre>
+            <p><code>migrate</code> showing as <code>Exited (0)</code> is not a failure. It is the design.</p>
+          </div>
+
+          <hr />
+
+          <h2>4. The two networks — the most important 8 lines in the repo</h2>
+          <p>AssessNow executes code written by candidates. Assume, always, that one of them will try to escape the sandbox. <code>server/src/sandbox.js</code> runs the code in a locked-down <code>node:vm</code> inside a child process — that's fence #1. Fence #2 is the network topology, and it's the one that saves you when fence #1 has a bug:</p>
+          <pre><code>networks:
+  default:                 # has internet — everything else
+  sandbox_internal:
+    internal: true         # NO gateway → no internet, no host, nothing</code></pre>
+
+          <pre><code>worker:
+  command: ["node", "src/worker.js"]
+  networks:
+    - sandbox_internal     # ← ONLY this one
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+  mem_limit: 512m</code></pre>
+          <p>Read that list slowly, because each line is a specific attack it kills:</p>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                <th style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-weight: 600;">Setting</th>
+                <th style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-weight: 600;">What it stops</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>networks: [sandbox_internal]</code> only</td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">Exfiltration and payload-fetching. Even with full RCE inside the worker, there is <strong>no route to the internet, the database, or the host</strong>.</td>
+              </tr>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>read_only: true</code> + <code>tmpfs: /tmp</code></td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">Persistence. Nothing can be written to the image filesystem; <code>/tmp</code> is RAM and dies with the container.</td>
+              </tr>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>cap_drop: [ALL]</code></td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">Every Linux capability — no raw sockets, no mount, no chown.</td>
+              </tr>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>no-new-privileges</code></td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">setuid escalation. A dropped privilege stays dropped.</td>
+              </tr>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>pids_limit: 256</code></td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">Fork bombs.</td>
+              </tr>
+              <tr style="border-bottom: 1px dashed #b2b6ab;">
+                <td style="padding: 0.75rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; vertical-align: top;"><code>mem_limit: 512m</code></td>
+                <td style="padding: 0.75rem 0; color: var(--secondary-muted);">Memory-exhaustion DoS taking the mini down mid-exam.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p>Notice that <code>redis</code> is on <strong>both</strong> networks. That's the deliberate seam: the API (on <code>default</code>) pushes a job into Redis; the worker (on <code>sandbox_internal</code>) pulls it out. Redis is the only thing that spans the airlock, and it carries data, not connectivity.</p>
+          <p>This is defence in depth done properly: not "we have a sandbox," but <em>"assume the sandbox is broken — what can the attacker reach?"</em> Answer: one Redis instance and 512 MB of RAM.</p>
+
+          <div class="practice">
+            <b>Practice — 10 min</b>
+            <p>Prove it, don't trust it:</p>
+            <pre style="margin-top:8px; margin-bottom:8px"><code>docker compose exec worker sh -c "getent hosts postgres || echo 'no route to postgres'"
+docker compose exec worker sh -c "wget -qO- -T3 https://example.com || echo 'no internet'"
+docker compose exec worker sh -c "touch /app/x || echo 'read-only rootfs'"</code></pre>
+            <p>All three should fail. If any succeeds, you have found a real hole — go read <code>docker-compose.yml</code> and find which line you lost.</p>
+          </div>
+
+          <hr />
+
+          <h2>5. What is durable and what is disposable</h2>
+          <p>Self-hosting means you own the durability question. Sort every piece of state into one of two boxes:</p>
+
+          <p><strong>Disposable (rebuilt by <code>docker compose up --build</code>)</strong><br />
+          Container filesystems, the built SPAs, the API process, Redis (<code>--save "" --appendonly no</code> — deliberately <em>not</em> persisted; it's a queue and a rate-limit counter, not a database).</p>
+
+          <p><strong>Durable (lose this and you're finished)</strong></p>
+          <ul>
+            <li><code>pgdata</code> — the named volume holding Postgres. Every assessment, attempt, invitation, integrity event.</li>
+            <li><code>server/.env</code> — <code>SESSION_SECRET</code>, OAuth secrets, Xendit keys. Not in git, not in the image.</li>
+            <li><code>~/.cloudflared/*.json</code> + <code>cert.pem</code> — the tunnel's identity.</li>
+            <li>Proctoring media in Cloudflare R2 (off-machine already — good).</li>
+          </ul>
+
+          <p><strong>The honest gap:</strong> <code>docker compose down -v</code> deletes <code>pgdata</code>. One flag. <code>SHARED-BACKEND-PLAN.md</code> §10 says a nightly <code>pg_dump</code> on 7-day rotation <em>should</em> mirror the old <code>com.assesslocal.backup</code> LaunchAgent — but that plan is a <strong>proposal</strong>, and the old LaunchAgent backs up the retired Electron JSON store, not Postgres. Until a <code>pg_dump</code> cron exists, the system of record for a live product has no automated off-machine backup. See §7.</p>
+
+          <hr />
+
+          <h2>6. The macOS-specific bits (the part no tutorial covers)</h2>
+          <p>Docker on macOS is not Docker on Linux — containers run inside a Linux VM (Docker Desktop / OrbStack / Colima). Consequences that actually bit this deploy:</p>
+          <ul>
+            <li><strong><code>user: "501:20"</code> on <code>cloudflared</code>.</strong> That's a macOS UID/GID — <code>501</code> is the first human user, <code>20</code> is <code>staff</code>. It's there so the container's process can read the bind-mounted credentials with the host's file ownership intact.</li>
+            <li><strong>The runtime must start at login.</strong> Containers can't restart if the VM isn't running. With FileVault on (and it must be — candidate PII and ID photos are on that disk), the mini can't fully boot unattended: someone types the disk password. That's an accepted trade: physical security and encryption over unattended reboot.</li>
+            <li><strong>The mini must never sleep.</strong> <code>sleep 0</code>, <code>womp 1</code> (wake for network), <code>autorestart 1</code> (start after power failure). Display can sleep; the machine cannot, or the tunnel drops mid-exam.</li>
+            <li><strong>It is a single point of failure, on purpose.</strong> No hosting bill, and the architecture is container-portable — <code>docker compose up</code> on a VPS is the escape hatch, with no rewrite. That was the explicit trade in the plan's decision table.</li>
+          </ul>
+
+          <hr />
+
+          <h2>7. What actually breaks first</h2>
+          <p>Ranked by "how likely is this to ruin an exam window":</p>
+          <ol>
+            <li><strong>Power / internet at the mini.</strong> No redundancy. A UPS is the cheapest resilience you can buy; wired Ethernet beats Wi-Fi (the deploy log admits it's still on Wi-Fi, <code>en1</code>).</li>
+            <li><strong>No Postgres backup.</strong> §5. This is the highest-severity gap in the whole setup and it costs an hour to close.</li>
+            <li><strong>Compose's <code>depends_on: [caddy]</code> on the tunnel is start-order, not readiness.</strong> If <code>cloudflared</code> registers before Caddy is accepting connections, you get 502s at the edge for a few seconds after boot. Harmless — unless it happens during an exam.</li>
+            <li><strong>CPU contention.</strong> <code>analysis-worker</code> (face-count, diarization) is CPU-heavy and shares the mini with everything else. The compose file already flags it: scale it or move it to its own host.</li>
+            <li><strong>Stale docs.</strong> <code>docs/DEPLOY-MACMINI.md</code> and <code>PROMPT-DEPLOY-MACMINI.md</code> describe the <em>retired</em> Electron deploy (<code>npm run desktop</code>, port 4820 on the host, <code>cloudflared</code> as a LaunchDaemon). Anyone — including a future you, or an agent reading the repo — who follows them will deploy the wrong architecture.</li>
+          </ol>
+
+          <hr />
+
+          <h2>Your reps</h2>
+
+          <h3>Reading questions (answer before checking the files)</h3>
+          <ol>
+            <li>A candidate's browser requests <code>https://candidate.assessnow.online/api/run</code> with a session cookie. Name every process it passes through, in order, and say <strong>exactly where TLS ends</strong>. Then: which of those hops would have to change if you moved the whole stack to a VPS tomorrow?</li>
+            <li><code>redis</code> is on both <code>default</code> and <code>sandbox_internal</code>. Suppose you "simplified" it onto <code>default</code> only. Compose still starts. What breaks, when, and what would the error look like? (Now the real one: suppose instead you put <code>worker</code> on <code>default</code> <em>as well as</em> <code>sandbox_internal</code>, so it could report metrics somewhere. What security property did you just delete, and would any test catch it?)</li>
+            <li><code>server/.env</code> sets <code>USE_QUEUE=1</code>, and <code>docker-compose.yml</code> has a commented-out <code>SANDBOX_INPROC_FALLBACK: "0"</code> with the note <em>"Fail closed if the code-run queue is down so execution never silently moves off the hardened worker onto the api."</em> Trace it: if Redis dies mid-exam <strong>as currently configured</strong>, where does candidate code execute? Which of the six protections in the §4 table does it still have?</li>
+          </ol>
+
+          <div class="practice">
+            <b>Generation rep (25 min — do this one)</b>
+            <p><strong>Break it on purpose, and predict the failure before you run it.</strong></p>
+            <ol>
+              <li>Write down, in one sentence each, what you expect to happen for each of these:
+                <ul>
+                  <li><code>docker compose stop redis</code> → then a candidate clicks <em>Run tests</em>.</li>
+                  <li>Delete <code>internal: true</code> from <code>sandbox_internal</code>, <code>docker compose up -d worker</code> → then run the three <code>docker compose exec worker</code> probes from §4.</li>
+                  <li>Change <code>migrate</code>'s <code>restart: "no"</code> to <code>unless-stopped</code> → <code>docker compose up -d</code>.</li>
+                </ul>
+              </li>
+              <li><em>Then</em> run each one and compare.</li>
+              <li>Restore with <code>git checkout docker-compose.yml && docker compose up -d --build</code>.</li>
+            </ol>
+            <p>Do this on a scratch branch, not during an exam window. The value isn't the breakage — it's the diff between what you predicted and what happened. That diff is precisely the part of the system you don't actually understand yet, and it's the part an AI-written config would slip past you.</p>
+            <p>Redo it from memory in a week. Spacing is what turns this from a fun afternoon into knowledge you'll still have at the next incident.</p>
+          </div>
+
+          <hr />
+
+          <h2>The honest flag</h2>
+          <p>Nobody has written the deployment doc for the architecture that is actually running.</p>
+          <p><code>docs/DEPLOY-MACMINI.md</code> (2026-06-12) and <code>DEPLOY-LOG-2026-06-21.md</code> are careful, well-written documents about a system that no longer exists: an Electron app, a host-level <code>cloudflared</code> LaunchDaemon, a JSON file as the database, and a manual <em>Start runner</em> click after every reboot. The current stack — Compose, Caddy, Postgres, a containerised tunnel, a network-isolated code-run worker — is documented only in <code>server/README.md</code> ("Run it (on the mini)", four lines) and in the comments of <code>docker-compose.yml</code>.</p>
+          <p>Those comments are genuinely good, and you clearly understood the security model when you wrote — or accepted — them. But comments in a compose file are not a deploy doc. They don't tell you what to do when the tunnel won't register at 7 a.m. on exam day, and they don't tell the next agent that <code>DEPLOY-MACMINI.md</code> is a trap.</p>
+          <p><strong>The single best next hour:</strong> write <code>docs/DEPLOY-MACMINI-DOCKER.md</code> yourself — from memory first, checking the configs only when you get stuck. Mark the old docs <code>&gt; **SUPERSEDED**</code> at the top. Add the <code>pg_dump</code> cron while you're in there. Writing it from memory is the point: it will show you, precisely and a little uncomfortably, which parts of your own hosting you can't yet explain without looking.</p>
+
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Fadhil Hanri</p>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="https://github.com/fadhilhaka" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://id.linkedin.com/in/fadhilhanri" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
