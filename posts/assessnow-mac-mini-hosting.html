@@ -358,13 +358,6 @@ docker compose exec worker sh -c "touch /app/x || echo 'read-only rootfs'"</code
             <p>Redo it from memory in a week. Spacing is what turns this from a fun afternoon into knowledge you'll still have at the next incident.</p>
           </div>
 
-          <hr />
-
-          <h2>The honest flag</h2>
-          <p>Nobody has written the deployment doc for the architecture that is actually running.</p>
-          <p><code>docs/DEPLOY-MACMINI.md</code> (2026-06-12) and <code>DEPLOY-LOG-2026-06-21.md</code> are careful, well-written documents about a system that no longer exists: an Electron app, a host-level <code>cloudflared</code> LaunchDaemon, a JSON file as the database, and a manual <em>Start runner</em> click after every reboot. The current stack — Compose, Caddy, Postgres, a containerised tunnel, a network-isolated code-run worker — is documented only in <code>server/README.md</code> ("Run it (on the mini)", four lines) and in the comments of <code>docker-compose.yml</code>.</p>
-          <p>Those comments are genuinely good, and you clearly understood the security model when you wrote — or accepted — them. But comments in a compose file are not a deploy doc. They don't tell you what to do when the tunnel won't register at 7 a.m. on exam day, and they don't tell the next agent that <code>DEPLOY-MACMINI.md</code> is a trap.</p>
-          <p><strong>The single best next hour:</strong> write <code>docs/DEPLOY-MACMINI-DOCKER.md</code> yourself — from memory first, checking the configs only when you get stuck. Mark the old docs <code>&gt; **SUPERSEDED**</code> at the top. Add the <code>pg_dump</code> cron while you're in there. Writing it from memory is the point: it will show you, precisely and a little uncomfortably, which parts of your own hosting you can't yet explain without looking.</p>
 
         </div>
       </article>
